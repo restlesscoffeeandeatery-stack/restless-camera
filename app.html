@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Absensi Restless">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0d0d14">
+<title>Absensi Restless</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100vh;background:#0d0d14;font-family:'Inter',system-ui,sans-serif;color:#e2e8f0}
+:root{
+  --bg:#0d0d14;--surface:#161622;--surface2:#1e1e2e;--border:#2a2a3e;
+  --accent:#6c63ff;--accent2:#a78bfa;--success:#10b981;--warning:#f59e0b;
+  --danger:#ef4444;--muted:#64748b;--radius:14px
+}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;padding:20px;
+  flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:28px 22px;width:100%;max-width:420px;
+  position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+/* ── SPLASH ── */
+#splash{background:var(--bg);position:fixed;inset:0;z-index:999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;transition:opacity .5s}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-icon{width:88px;height:88px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:24px;display:flex;align-items:center;justify-content:center;
+  font-size:44px;box-shadow:0 16px 48px rgba(108,99,255,.4);
+  animation:pop .6s cubic-bezier(.34,1.56,.64,1) both}
+.splash-title{font-size:26px;font-weight:700;animation:fadeUp .5s .2s both}
+.splash-sub{font-size:14px;color:var(--muted);animation:fadeUp .5s .35s both}
+.dots{display:flex;gap:8px;animation:fadeUp .5s .5s both}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--accent);
+  animation:dot 1.2s .5s infinite}
+.dots span:nth-child(2){animation-delay:.7s;background:var(--accent2)}
+.dots span:nth-child(3){animation-delay:.9s}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes dot{0%,80%,100%{opacity:.3;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}
+
+/* ── HEADER ── */
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ph-icon{width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ph-text h2{font-size:15px;font-weight:600}
+.ph-text p{font-size:11px;color:var(--muted);margin-top:1px}
+.ph-badge{margin-left:auto}
+
+/* ── FORM ── */
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);
+  margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+input,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:13px 14px;color:#e2e8f0;font-size:16px;
+  font-family:inherit;outline:none;transition:border-color .2s;-webkit-appearance:none}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.15)}
+input[type="password"]{letter-spacing:4px}
+textarea{resize:none;min-height:80px;font-size:14px}
+.fg{margin-bottom:16px}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:14px;border-radius:10px;border:none;
+  font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;
+  touch-action:manipulation;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;box-shadow:0 4px 20px rgba(108,99,255,.3)}
+.btn-primary:active{transform:scale(.98)}
+.btn-success{background:var(--success);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.sp{height:10px}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.5px}
+.badge-green{background:rgba(16,185,129,.15);color:var(--success)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--warning)}
+.badge-purple{background:rgba(108,99,255,.15);color:var(--accent2)}
+.badge-gray{background:var(--surface2);color:var(--muted)}
+
+/* ── ALERT ── */
+.alert{padding:12px 14px;border-radius:10px;font-size:13px;
+  margin-bottom:14px;display:none;line-height:1.5}
+.alert.show{display:block}
+.alert-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger)}
+.alert-success{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--success)}
+.alert-info{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);color:var(--accent2)}
+.alert-warning{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warning)}
+
+/* ── STEPS ── */
+.steps{display:flex;gap:5px;margin-bottom:18px}
+.step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
+.step.active{background:var(--accent)}
+.step.done{background:var(--success)}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* ── EMPLOYEE BADGE ── */
+.emp-badge{display:flex;align-items:center;gap:12px;background:var(--surface2);
+  border-radius:10px;padding:12px 14px;margin-bottom:16px;border:1px solid var(--border)}
+.emp-av{width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.emp-info h3{font-size:14px;font-weight:600}
+.emp-info p{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── CLOCK ── */
+.clock-wrap{text-align:center;padding:16px;background:var(--surface2);
+  border-radius:10px;margin-bottom:14px;border:1px solid var(--border)}
+.clock{font-size:32px;font-weight:700;letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.clock-date{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── STATUS GRID ── */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sitem{background:var(--surface2);border-radius:10px;padding:11px;border:1px solid var(--border)}
+.sitem .slbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.sitem .sval{font-size:13px;font-weight:600}
+
+/* ── SHIFT INFO ── */
+.shift-box{background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;display:none}
+
+/* ── GPS ── */
+.gps-panel{background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-bottom:14px}
+.gps-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px}
+.gdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.gdot.detecting{background:var(--warning);animation:pulse 1s infinite}
+.gdot.ok{background:var(--success)}
+.gdot.err{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.gdetail{font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace}
+.rbar-wrap{margin-top:8px}
+.rlabel{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+.rbar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.rfill{height:100%;border-radius:3px;transition:width .5s,background .3s}
+
+/* ── CAMERA ── */
+#camView{background:#000;border-radius:12px;overflow:hidden;
+  position:relative;width:100%;aspect-ratio:4/3;margin-bottom:12px;max-height:55vh}
+#video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+#camOverlay{position:absolute;inset:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center}
+.cam-oval{width:52%;aspect-ratio:3/4;border:2px dashed rgba(255,255,255,.5);border-radius:50%}
+#camBar{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center}
+.shutter{width:70px;height:70px;border-radius:50%;border:4px solid #fff;
+  background:rgba(255,255,255,.2);font-size:28px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;touch-action:manipulation;
+  transition:transform .12s;backdrop-filter:blur(4px)}
+.shutter:active{transform:scale(.88)}
+.cam-status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.75);color:#fff;padding:10px 18px;border-radius:10px;
+  font-size:13px;display:none;text-align:center;white-space:pre-line;z-index:5}
+
+/* ── PREVIEW FOTO ── */
+.preview-wrap{border-radius:10px;overflow:hidden;margin-bottom:12px;
+  border:2px solid var(--success);display:none}
+.preview-wrap img{width:100%;display:block}
+
+/* ── SUCCESS ── */
+#successScreen{background:var(--bg)}
+.success-card{text-align:center;padding:40px 24px}
+.success-icon{font-size:72px;margin-bottom:16px}
+.success-info{background:var(--surface2);border-radius:12px;padding:16px;
+  margin:16px 0;border:1px solid var(--border)}
+
+/* ── LOADING ── */
+#loading{display:none;position:fixed;inset:0;background:rgba(13,13,20,.85);
+  z-index:998;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.show{display:flex}
+.spinner{width:40px;height:40px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingText{color:var(--muted);font-size:14px}
+
+/* ── INSTALL BANNER ── */
+#installBanner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:12px 16px;align-items:center;gap:12px}
+#installBanner img{width:38px;height:38px;border-radius:9px;flex-shrink:0}
+.ib-text{flex:1}
+.ib-text strong{font-size:13px;display:block}
+.ib-text span{font-size:11px;color:var(--muted)}
+.ib-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;border:none;border-radius:8px;padding:8px 14px;
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.ib-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px}
+
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ SPLASH ═══════════════════════════════════ -->
+<div id="splash">
+  <div class="splash-icon">☕</div>
+  <div>
+    <div class="splash-title">Absensi Restless</div>
+    <div class="splash-sub">Restless Coffee & Eatery</div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- ═══════════════════════════════════ LOADING ══════════════════════════════════ -->
+<div id="loading"><div class="spinner"></div><p id="loadingText">Memproses...</p></div>
+
+<!-- ═══════════════════════════════════ SCREEN 1: LOGIN ══════════════════════════ -->
+<div class="screen active" id="s1">
+  <div class="card">
+    <div class="ph">
+      <div class="ph-icon">👤</div>
+      <div class="ph-text"><h2>Login Karyawan</h2><p>Restless Coffee & Eatery</p></div>
+      <div class="ph-badge"><span class="badge badge-purple">Karyawan</span></div>
+    </div>
+    <div id="loginAlert" class="alert alert-error"></div>
+    <div class="fg">
+      <label>Kode Akses</label>
+      <input type="password" id="accessCode" placeholder="••••" autocomplete="off" inputmode="numeric">
+    </div>
+    <button class="btn btn-primary" id="btnLogin" onclick="doLogin()">🔓 Masuk</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCREEN 2: PILIH ABSEN ════════════════════ -->
+<div class="screen" id="s2">
+  <div class="card">
+    <div class="ph">
+      <div class="ph-icon">☕</div>
+      <div class="ph-text"><h2>Absensi</h2><p>Pilih jenis absensi</p></div>
+      <div class="ph-badge"><span class="badge badge-green" id="empBadgeName">Karyawan</span></div>
+    </div>
+    <div id="empBadge" class="emp-badge"></div>
+    <div class="clock-wrap">
+      <div class="clock" id="liveClock">--:--:--</div>
+      <div class="clock-date" id="liveDate">--</div>
+    </div>
+    <div id="statusGrid" class="sgrid"></div>
+    <div id="shiftBox" class="shift-box"></div>
+    <div id="choiceAlert" class="alert alert-info"></div>
+    <button class="btn btn-primary" id="btnMasuk" onclick="startAbsen('checkin')">☀️ Absen Masuk</button>
+    <div class="sp"></div>
+    <button class="btn btn-ghost" id="btnPulang" onclick="startAbsen('checkout')">🌙 Absen Pulang</button>
+    <div class="divider"></div>
+    <button class="btn btn-ghost" onclick="doLogout()">← Keluar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCREEN 3: GPS ════════════════════════════ -->
+<div class="screen" id="s3">
+  <div class="card">
+    <div class="ph">
+      <div class="ph-icon">📍</div>
+      <div class="ph-text"><h2 id="gpsTitle">Verifikasi Lokasi</h2><p>Jl. Gayam No.3, Baciro</p></div>
+      <div class="ph-badge"><span class="badge badge-purple">1/3</span></div>
+    </div>
+    <div class="steps"><div class="step active"></div><div class="step"></div><div class="step"></div></div>
+    <div class="gps-panel">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:20px">🗺️</span>
+        <div>
+          <div style="font-size:13px;font-weight:600">Deteksi GPS</div>
+          <div style="font-size:11px;color:var(--muted)">Harus dalam radius kantor</div>
+        </div>
+      </div>
+      <div class="gps-row"><span class="gdot detecting" id="gpsDot"></span><span id="gpsText">Mendeteksi lokasi...</span></div>
+      <div class="gdetail" id="gpsDetail"></div>
+      <div class="rbar-wrap" id="rbarWrap" style="display:none">
+        <div class="rlabel"><span>Jarak dari kantor</span><span id="rbarLabel">--</span></div>
+        <div class="rbar"><div class="rfill" id="rbarFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="gpsAlert" class="alert"></div>
+    <button class="btn btn-primary" id="btnGpsNext" onclick="goToCamera()" disabled>Lanjut → Foto Selfie</button>
+    <div class="sp"></div>
+    <button class="btn btn-ghost" onclick="retryGps()">🔄 Deteksi Ulang</button>
+    <div class="sp"></div>
+    <button class="btn btn-ghost" onclick="cancelGps()">← Kembali</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCREEN 4: KAMERA ═════════════════════════ -->
+<div class="screen" id="s4">
+  <div class="card">
+    <div class="ph">
+      <div class="ph-icon">📸</div>
+      <div class="ph-text"><h2 id="camTitle">Foto Selfie</h2><p>Pastikan wajah terlihat jelas</p></div>
+      <div class="ph-badge"><span class="badge badge-purple">2/3</span></div>
+    </div>
+    <div class="steps"><div class="step done"></div><div class="step active"></div><div class="step"></div></div>
+
+    <!-- Kamera aktif -->
+    <div id="camView">
+      <video id="video" autoplay playsinline muted webkit-playsinline></video>
+      <div id="camOverlay"><div class="cam-oval"></div></div>
+      <div id="camBar"><button class="shutter" onclick="snap()">📷</button></div>
+      <div class="cam-status" id="camStatus"></div>
+    </div>
+
+    <!-- Preview foto -->
+    <div class="preview-wrap" id="previewWrap"><img id="previewImg" src="" alt="foto"></div>
+
+    <canvas id="canvas"></canvas>
+    <div id="camAlert" class="alert alert-error"></div>
+
+    <button class="btn btn-ghost" id="btnFlip" onclick="flipCam()" style="margin-bottom:8px">🔄 Ganti Kamera</button>
+    <div id="camActions" style="display:none">
+      <button class="btn btn-success" onclick="confirmFoto()" style="margin-bottom:8px">✅ Gunakan Foto Ini</button>
+      <button class="btn btn-ghost" onclick="retakeFoto()">🔄 Ambil Ulang</button>
+    </div>
+    <div class="sp"></div>
+    <button class="btn btn-ghost" onclick="cancelCamera()">← Kembali</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCREEN 5: ALASAN ═════════════════════════ -->
+<div class="screen" id="s5">
+  <div class="card">
+    <div class="ph">
+      <div class="ph-icon" id="reasonIcon">⚠️</div>
+      <div class="ph-text"><h2 id="reasonTitle">Konfirmasi</h2><p id="reasonSub">Langkah terakhir</p></div>
+      <div class="ph-badge"><span class="badge badge-purple">3/3</span></div>
+    </div>
+    <div class="steps"><div class="step done"></div><div class="step done"></div><div class="step active"></div></div>
+    <div id="reasonAlert" class="alert alert-info"></div>
+    <div id="reasonForm" class="fg">
+      <label id="reasonLabel">Alasan</label>
+      <textarea id="reasonText" placeholder="Tuliskan alasan Anda..."></textarea>
+    </div>
+    <button class="btn btn-success" onclick="submitAbsen()">✅ Konfirmasi Absensi</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCREEN 6: SUKSES ═════════════════════════ -->
+<div class="screen" id="s6">
+  <div class="card success-card">
+    <div class="success-icon" id="successIcon">✅</div>
+    <h2 id="successTitle" style="font-size:20px;margin-bottom:6px"></h2>
+    <p id="successMsg" style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5"></p>
+    <div class="success-info">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Waktu Tercatat</div>
+      <div id="successTime" style="font-size:28px;font-weight:700;letter-spacing:-.5px"></div>
+      <div id="successStatus" style="margin-top:6px"></div>
+      <div id="successShift" style="margin-top:4px"></div>
+    </div>
+    <div id="successLoc" style="background:var(--surface2);border-radius:10px;padding:11px;
+         margin-bottom:16px;border:1px solid var(--border);font-size:12px;color:var(--muted)"></div>
+    <button class="btn btn-primary" onclick="backToMenu()">← Kembali ke Menu</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ INSTALL BANNER ═══════════════════════════ -->
+<div id="installBanner">
+  <img src="icon-192.png" alt="icon">
+  <div class="ib-text"><strong>Install Absensi Restless</strong><span>Tambahkan ke layar utama</span></div>
+  <button class="ib-btn" onclick="doInstall()">Install</button>
+  <button class="ib-close" onclick="closeInstall()">✕</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// KONFIGURASI — WAJIB DIISI
+// ═══════════════════════════════════════════════════════════════
+var WEBAPP_URL = 'GANTI_DENGAN_URL_APPS_SCRIPT_EXEC'; // https://script.google.com/macros/s/.../exec
+var KANTOR_LAT = -7.7785;
+var KANTOR_LNG = 110.3831;
+var RADIUS_METER = 200;
+var SHIFTS = [
+  { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'11:59' },
+  { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'12:00', sampai:'12:59' },
+  { nama:'Middle 2', jamMasuk:'13:00', jamPulang:'21:00', dari:'13:00', sampai:'14:59' },
+  { nama:'Closing',  jamMasuk:'15:00', jamPulang:'23:00', dari:'15:00', sampai:'23:59' }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+var state = {
+  employee: null,
+  mode: null,
+  gpsCoords: null,
+  photo: null,
+  attendanceToday: null
+};
+var stream = null;
+var facing = 'user';
+var gpsWatchId = null;
+var clockInterval = null;
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function loading(msg) {
+  document.getElementById('loadingText').textContent = msg || 'Memproses...';
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+function showAlert(id, msg, type) {
+  var el = document.getElementById(id);
+  el.className = 'alert alert-' + (type||'error') + ' show';
+  el.textContent = msg;
+}
+function clearAlert(id) { document.getElementById(id).classList.remove('show'); }
+
+function toMin(s) { var p = String(s).split(':'); return +p[0]*60 + +p[1]; }
+
+function detectShift(jamStr) {
+  var m = toMin(jamStr);
+  for (var i = 0; i < SHIFTS.length; i++) {
+    if (m >= toMin(SHIFTS[i].dari) && m <= toMin(SHIFTS[i].sampai)) return SHIFTS[i];
+  }
+  return SHIFTS[SHIFTS.length-1];
+}
+
+function formatDate(d) {
+  var days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// API CALL ke Apps Script
+// ═══════════════════════════════════════════════════════════════
+function apiGet(fn, params) {
+  var url = WEBAPP_URL + '?fn=' + encodeURIComponent(fn);
+  if (params) {
+    for (var k in params) {
+      url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(
+        typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
+      );
+    }
+  }
+  return fetch(url).then(function(r) { return r.json(); });
+}
+
+function apiPost(data) {
+  return fetch(WEBAPP_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(data)
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPLASH
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('load', function() {
+  registerSW();
+  setTimeout(function() {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(function() { document.getElementById('splash').style.display = 'none'; }, 500);
+  }, 1800);
+  setupInstallPrompt();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  var inp = document.getElementById('accessCode');
+  if (inp) {
+    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+    inp.addEventListener('input', function() { clearAlert('loginAlert'); });
+  }
+});
+
+function doLogin() {
+  var code = document.getElementById('accessCode').value.trim();
+  if (!code) { showAlert('loginAlert', 'Masukkan kode akses terlebih dahulu.'); return; }
+  document.getElementById('btnLogin').disabled = true;
+  loading('Memverifikasi...');
+
+  apiGet('verifyAccessCode', { code: code })
+    .then(function(res) {
+      if (res.success) {
+        state.employee = res.employee;
+        document.getElementById('accessCode').value = '';
+        return apiGet('checkTodayAttendance', { employeeId: res.employee.id })
+          .then(function(att) {
+            state.attendanceToday = att;
+            renderChoiceScreen();
+            startClock();
+            showScreen('s2');
+          });
+      } else {
+        showAlert('loginAlert', res.message || 'Kode tidak ditemukan.');
+      }
+    })
+    .catch(function() { showAlert('loginAlert', 'Gagal terhubung. Periksa koneksi internet.'); })
+    .finally(function() { hideLoading(); document.getElementById('btnLogin').disabled = false; });
+}
+
+function renderChoiceScreen() {
+  var e = state.employee;
+  var att = state.attendanceToday || {};
+
+  document.getElementById('empBadgeName').textContent = e.name;
+  document.getElementById('empBadge').innerHTML =
+    '<div class="emp-av">👤</div><div class="emp-info"><h3>' + e.name + '</h3><p>' + e.division + ' · ' + e.id + '</p></div>';
+
+  document.getElementById('statusGrid').innerHTML =
+    '<div class="sitem"><div class="slbl">Absen Masuk</div><div class="sval">' +
+    (att.hasCheckedIn ? '<span style="font-size:12px">' + att.checkInTime + '</span>' : '<span class="badge badge-gray">Belum</span>') +
+    '</div></div>' +
+    '<div class="sitem"><div class="slbl">Absen Pulang</div><div class="sval">' +
+    (att.hasCheckedOut ? '<span style="font-size:12px">' + att.checkOutTime + '</span>' : '<span class="badge badge-gray">Belum</span>') +
+    '</div></div>';
+
+  // Shift info
+  var now = new Date();
+  var shiftBox = document.getElementById('shiftBox');
+  if (att.hasCheckedIn && att.shift) {
+    var sf = null;
+    for (var i = 0; i < SHIFTS.length; i++) { if (SHIFTS[i].nama === att.shift) { sf = SHIFTS[i]; break; } }
+    shiftBox.style.display = 'block';
+    shiftBox.innerHTML = '<span style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px">Shift Hari Ini</span><br>' +
+      '<strong style="color:var(--accent2)">⏰ ' + att.shift + '</strong>' +
+      (sf ? ' <span style="color:var(--muted)">' + sf.jamMasuk + '–' + sf.jamPulang + '</span>' : '');
+  } else {
+    var sh = detectShift(now.getHours() + ':' + now.getMinutes());
+    shiftBox.style.display = 'block';
+    shiftBox.innerHTML = '<span style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px">Shift Sekarang</span><br>' +
+      '<strong style="color:var(--accent2)">⏰ ' + sh.nama + '</strong> <span style="color:var(--muted)">' + sh.jamMasuk + '–' + sh.jamPulang + '</span>';
+  }
+
+  var btnM = document.getElementById('btnMasuk');
+  var btnP = document.getElementById('btnPulang');
+  var ca = document.getElementById('choiceAlert');
+  btnM.disabled = false; btnM.style.opacity = '1';
+  btnP.disabled = false; btnP.style.opacity = '1';
+  ca.classList.remove('show');
+
+  if (att.hasCheckedIn && att.hasCheckedOut) {
+    btnM.disabled = true; btnM.style.opacity = '.4';
+    btnP.disabled = true; btnP.style.opacity = '.4';
+    showAlert('choiceAlert', '✅ Absensi hari ini sudah lengkap!', 'success');
+  } else if (att.hasCheckedIn) {
+    btnM.disabled = true; btnM.style.opacity = '.4';
+  } else {
+    btnP.disabled = true; btnP.style.opacity = '.4';
+  }
+}
+
+function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
+  clockInterval = setInterval(function() {
+    var n = new Date();
+    document.getElementById('liveClock').textContent =
+      n.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('liveDate').textContent = formatDate(n);
+  }, 1000);
+}
+
+function doLogout() {
+  if (clockInterval) clearInterval(clockInterval);
+  state = { employee:null, mode:null, gpsCoords:null, photo:null, attendanceToday:null };
+  showScreen('s1');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════════════════════════
+function startAbsen(mode) {
+  state.mode = mode;
+  state.gpsCoords = null;
+  document.getElementById('gpsTitle').textContent =
+    mode === 'checkin' ? 'Verifikasi Lokasi — Masuk' : 'Verifikasi Lokasi — Pulang';
+  resetGpsUI();
+  showScreen('s3');
+  startGps();
+}
+
+function resetGpsUI() {
+  document.getElementById('gpsDot').className = 'gdot detecting';
+  document.getElementById('gpsText').textContent = 'Mendeteksi lokasi...';
+  document.getElementById('gpsDetail').textContent = '';
+  document.getElementById('rbarWrap').style.display = 'none';
+  document.getElementById('btnGpsNext').disabled = true;
+  clearAlert('gpsAlert');
+}
+
+function startGps() {
+  stopGps();
+  if (!navigator.geolocation) { setGpsErr('GPS tidak didukung browser ini.'); return; }
+  gpsWatchId = navigator.geolocation.watchPosition(onGpsOk, onGpsErr, {
+    enableHighAccuracy: true, timeout: 20000, maximumAge: 3000
+  });
+}
+
+function stopGps() {
+  if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+}
+
+function onGpsOk(pos) {
+  stopGps();
+  var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = Math.round(pos.coords.accuracy);
+  var dLat = lat - KANTOR_LAT, dLng = lng - KANTOR_LNG;
+  var jarak = Math.round(Math.sqrt(dLat*dLat + dLng*dLng) * 111320);
+  state.gpsCoords = { lat: lat, lng: lng, jarak: jarak, acc: acc };
+
+  document.getElementById('gpsDetail').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6) + '  ·  ±' + acc + 'm';
+  document.getElementById('rbarWrap').style.display = 'block';
+  document.getElementById('rbarLabel').textContent = jarak + 'm / ' + RADIUS_METER + 'm';
+  var pct = Math.min(jarak / RADIUS_METER * 100, 100);
+  var fill = document.getElementById('rbarFill');
+  fill.style.width = pct + '%';
+  fill.style.background = jarak <= RADIUS_METER ? '#10b981' : '#ef4444';
+
+  if (jarak <= RADIUS_METER) {
+    document.getElementById('gpsDot').className = 'gdot ok';
+    document.getElementById('gpsText').textContent = '✅ Dalam jangkauan (' + jarak + 'm dari kantor)';
+    document.getElementById('btnGpsNext').disabled = false;
+    clearAlert('gpsAlert');
+  } else {
+    document.getElementById('gpsDot').className = 'gdot err';
+    document.getElementById('gpsText').textContent = '❌ Di luar jangkauan (' + jarak + 'm)';
+    showAlert('gpsAlert', 'Anda terlalu jauh dari kantor. Pastikan berada di Restless Coffee & Eatery.', 'error');
+  }
+}
+
+function onGpsErr(err) {
+  var msgs = {1:'Izin lokasi ditolak. Aktifkan GPS di pengaturan browser.',2:'Sinyal GPS tidak tersedia.',3:'Timeout. Tap Deteksi Ulang.'};
+  setGpsErr(msgs[err.code] || 'Gagal mendapat lokasi.');
+}
+function setGpsErr(msg) {
+  document.getElementById('gpsDot').className = 'gdot err';
+  document.getElementById('gpsText').textContent = 'Gagal';
+  showAlert('gpsAlert', msg, 'error');
+}
+function retryGps() { resetGpsUI(); startGps(); }
+function cancelGps() { stopGps(); showScreen('s2'); }
+
+// ═══════════════════════════════════════════════════════════════
+// KAMERA
+// ═══════════════════════════════════════════════════════════════
+function goToCamera() {
+  state.photo = null;
+  document.getElementById('camTitle').textContent =
+    state.mode === 'checkin' ? 'Foto Selfie — Masuk' : 'Foto Selfie — Pulang';
+  document.getElementById('camView').style.display = 'block';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('camActions').style.display = 'none';
+  document.getElementById('btnFlip').style.display = 'flex';
+  clearAlert('camAlert');
+  showScreen('s4');
+  openCamera();
+}
+
+function openCamera() {
+  setCamStatus('Membuka kamera...');
+  var c = { video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false };
+  navigator.mediaDevices.getUserMedia(c)
+    .then(gotStream)
+    .catch(function() {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false })
+        .then(gotStream)
+        .catch(function() {
+          navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(gotStream)
+            .catch(onCamErr);
+        });
+    });
+}
+
+function gotStream(s) {
+  stream = s;
+  var v = document.getElementById('video');
+  v.srcObject = s;
+  v.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  v.onloadedmetadata = function() { v.play().catch(function(){}); setCamStatus(''); };
+  setTimeout(function() { if(v.paused){ v.play().catch(function(){}); setCamStatus(''); } }, 1500);
+}
+
+function onCamErr(err) {
+  var msg = err.name === 'NotAllowedError' ?
+    'Izin kamera ditolak.\n\nTap ikon 🔒 di address bar → Izin situs → Kamera → Izinkan → Refresh' :
+    err.name === 'NotReadableError' ? 'Kamera dipakai app lain. Tutup lalu coba lagi.' :
+    'Kamera gagal: ' + err.name;
+  showAlert('camAlert', msg, 'error');
+  setCamStatus('');
+}
+
+function flipCam() {
+  facing = facing === 'user' ? 'environment' : 'user';
+  stopStream(); openCamera();
+}
+
+function snap() {
+  var v = document.getElementById('video');
+  if (!stream || v.readyState < 2 || v.videoWidth === 0) {
+    setCamStatus('⏳ Kamera belum siap...'); setTimeout(function(){setCamStatus('');},1500); return;
+  }
+  var c = document.getElementById('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  var ctx = c.getContext('2d');
+  if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
+  ctx.drawImage(v,0,0);
+  state.photo = c.toDataURL('image/jpeg', 0.82);
+  stopStream();
+  document.getElementById('previewImg').src = state.photo;
+  document.getElementById('previewWrap').style.display = 'block';
+  document.getElementById('camView').style.display = 'none';
+  document.getElementById('camActions').style.display = 'block';
+  document.getElementById('btnFlip').style.display = 'none';
+}
+
+function retakeFoto() {
+  state.photo = null;
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('camView').style.display = 'block';
+  document.getElementById('camActions').style.display = 'none';
+  document.getElementById('btnFlip').style.display = 'flex';
+  clearAlert('camAlert');
+  openCamera();
+}
+
+function confirmFoto() { goToReason(); }
+function cancelCamera() { stopStream(); showScreen('s3'); }
+function stopStream() {
+  if (stream) { stream.getTracks().forEach(function(t){t.stop();}); stream = null; }
+  var v = document.getElementById('video');
+  if (v) v.srcObject = null;
+}
+function setCamStatus(msg) {
+  var el = document.getElementById('camStatus');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ALASAN
+// ═══════════════════════════════════════════════════════════════
+function goToReason() {
+  var now = new Date();
+  var menitNow = now.getHours()*60 + now.getMinutes();
+  var needReason = false;
+  var sh = null;
+
+  if (state.mode === 'checkin') {
+    sh = detectShift(now.getHours()+':'+now.getMinutes());
+    needReason = menitNow > toMin(sh.jamMasuk);
+    document.getElementById('reasonIcon').textContent = needReason ? '⚠️' : '✅';
+    document.getElementById('reasonTitle').textContent = needReason ? 'Anda Terlambat' : 'Konfirmasi Absen Masuk';
+    document.getElementById('reasonSub').textContent = sh ? 'Shift ' + sh.nama + ' (' + sh.jamMasuk + '–' + sh.jamPulang + ')' : '';
+    document.getElementById('reasonLabel').textContent = 'Alasan Terlambat';
+    if (needReason) showAlert('reasonAlert', '⚠️ Jam masuk melebihi batas shift. Wajib isi alasan.', 'warning');
+    else showAlert('reasonAlert', '✅ Waktu masuk sesuai shift. Tap konfirmasi.', 'success');
+  } else {
+    var att = state.attendanceToday || {};
+    if (att.shift) {
+      for (var i = 0; i < SHIFTS.length; i++) { if (SHIFTS[i].nama === att.shift) { sh = SHIFTS[i]; break; } }
+    }
+    if (!sh) sh = SHIFTS[0];
+    needReason = menitNow < toMin(sh.jamPulang);
+    document.getElementById('reasonIcon').textContent = needReason ? '⚠️' : '✅';
+    document.getElementById('reasonTitle').textContent = needReason ? 'Pulang Lebih Awal' : 'Konfirmasi Absen Pulang';
+    document.getElementById('reasonSub').textContent = sh ? 'Shift ' + sh.nama + ' s/d ' + sh.jamPulang : '';
+    document.getElementById('reasonLabel').textContent = 'Alasan Pulang Cepat';
+    if (needReason) showAlert('reasonAlert', '⚠️ Pulang sebelum shift selesai. Wajib isi alasan.', 'warning');
+    else showAlert('reasonAlert', '✅ Waktu pulang sesuai shift. Tap konfirmasi.', 'success');
+  }
+
+  document.getElementById('reasonText').value = '';
+  document.getElementById('reasonForm').style.display = needReason ? 'block' : 'none';
+  showScreen('s5');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUBMIT ABSENSI
+// ═══════════════════════════════════════════════════════════════
+function submitAbsen() {
+  var alasan = document.getElementById('reasonText').value.trim();
+  if (!state.photo) { showAlert('reasonAlert', 'Foto tidak ada. Kembali dan ambil foto.', 'error'); return; }
+  if (!state.gpsCoords) { showAlert('reasonAlert', 'Data GPS tidak ada. Kembali dan ulangi.', 'error'); return; }
+
+  loading(state.mode === 'checkin' ? 'Menyimpan absen masuk...' : 'Menyimpan absen pulang...');
+
+  var payload = {
+    fn: state.mode === 'checkin' ? 'checkIn' : 'checkOut',
+    employeeId: state.employee.id,
+    employeeName: state.employee.name,
+    division: state.employee.division,
+    photo: state.photo,
+    alasan: alasan,
+    lat: state.gpsCoords.lat,
+    lng: state.gpsCoords.lng
+  };
+
+  // Kirim via POST ke Apps Script
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success) {
+      showSuccessScreen(res);
+    } else {
+      showAlert('reasonAlert', res.message || 'Gagal menyimpan. Coba lagi.', 'error');
+    }
+  })
+  .catch(function(err) {
+    // Fallback: coba GET dengan parameter (tanpa foto — upload foto terpisah)
+    showAlert('reasonAlert', 'Koneksi gagal: ' + err.message + '\nCoba lagi.', 'error');
+  })
+  .finally(function() { hideLoading(); });
+}
+
+function showSuccessScreen(res) {
+  var isLate = res.status === 'TERLAMBAT' || res.status === 'PULANG CEPAT';
+  document.getElementById('successIcon').textContent = isLate ? '⚠️' : '✅';
+  document.getElementById('successTitle').textContent = state.mode === 'checkin' ? 'Absen Masuk Berhasil!' : 'Absen Pulang Berhasil!';
+  document.getElementById('successMsg').textContent = res.message || '';
+  document.getElementById('successTime').textContent = res.time || '';
+  document.getElementById('successStatus').innerHTML = '<span class="badge ' + (isLate ? 'badge-yellow' : 'badge-green') + '">' + (res.status||'') + '</span>';
+  document.getElementById('successShift').innerHTML = res.shift ? '<span class="badge badge-purple">⏰ Shift ' + res.shift + ' · ' + (res.jamMulaiShift||'') + '–' + (res.jamPulangShift||'') + '</span>' : '';
+  var mapsUrl = 'https://maps.google.com/?q=' + state.gpsCoords.lat + ',' + state.gpsCoords.lng;
+  document.getElementById('successLoc').innerHTML =
+    '📍 ' + state.gpsCoords.jarak + 'm dari kantor  <a href="' + mapsUrl + '" target="_blank" style="color:var(--accent2);font-size:11px">Maps ↗</a>' +
+    (res.durasi ? '<br>⏱️ Durasi kerja: <strong style="color:#e2e8f0">' + res.durasi + ' jam</strong>' : '');
+
+  // Refresh attendance state
+  state.attendanceToday = null;
+  showScreen('s6');
+}
+
+function backToMenu() {
+  loading('Memuat ulang...');
+  apiGet('checkTodayAttendance', { employeeId: state.employee.id })
+    .then(function(att) { state.attendanceToday = att; renderChoiceScreen(); showScreen('s2'); })
+    .catch(function() { showScreen('s2'); })
+    .finally(function() { hideLoading(); });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PWA
+// ═══════════════════════════════════════════════════════════════
+var deferredPrompt = null;
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/restless-camera/sw.js').catch(function(){});
+  }
+}
+function setupInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault(); deferredPrompt = e;
+    setTimeout(function() {
+      var b = document.getElementById('installBanner');
+      if (b) b.style.display = 'flex';
+    }, 5000);
+  });
+  var isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+  var isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (isIOS && !isStandalone) {
+    setTimeout(function() {
+      var b = document.getElementById('installBanner');
+      if (b) {
+        b.style.display = 'flex';
+        b.querySelector('.ib-btn').textContent = 'Cara Install';
+        b.querySelector('.ib-btn').onclick = function() {
+          alert('Install di iPhone:\n1. Tap ikon Share (□↑) di bawah\n2. Pilih "Add to Home Screen"\n3. Tap "Add"');
+        };
+      }
+    }, 5000);
+  }
+}
+function doInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function() { deferredPrompt = null; closeInstall(); });
+}
+function closeInstall() {
+  var b = document.getElementById('installBanner');
+  if (b) b.style.display = 'none';
+}
+</script>
+</body>
+</html>
