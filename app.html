@@ -362,6 +362,13 @@ canvas{display:none}
     <div id="successLoc" style="background:var(--surface2);border-radius:10px;padding:11px;
          margin-bottom:16px;border:1px solid var(--border);font-size:12px;color:var(--muted)"></div>
     <button class="btn btn-primary" onclick="backToMenu()">← Kembali ke Menu</button>
+    <!-- DEBUG PANEL -->
+    <div id="debugPanel" style="display:none;margin-top:14px;background:#0a0a0a;
+         border:1px solid #333;border-radius:8px;padding:12px;font-size:11px;
+         font-family:monospace;color:#0f0;max-height:200px;overflow-y:auto">
+      <div style="color:#888;margin-bottom:6px">LOG FOTO:</div>
+      <div id="debugLog"></div>
+    </div>
   </div>
 </div>
 
@@ -994,8 +1001,21 @@ function backToMenu() {
 // Flow: ambil token dari Apps Script → upload foto ke Drive REST API
 //       → notify Apps Script untuk update URL di spreadsheet
 // ═══════════════════════════════════════════════════════════════
+function dbg(msg) {
+  console.log(msg);
+  var panel = document.getElementById('debugPanel');
+  var log   = document.getElementById('debugLog');
+  if (panel && log) {
+    panel.style.display = 'block';
+    var line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString('id-ID') + ' ' + msg;
+    log.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+  }
+}
+
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
-  console.log('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
+  dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
   // Step 1: Ambil OAuth token + folder ID dari Apps Script
   apiGet('getDriveUploadToken', {
@@ -1004,18 +1024,18 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     employeeId: employeeId,
     tipe:       tipe
   }).then(function(res) {
-    console.log('[FOTO] getDriveUploadToken:', JSON.stringify(res).substring(0, 100));
+    dbg('[FOTO] getDriveUploadToken:', JSON.stringify(res).substring(0, 100));
     if (!res || !res.ok) {
-      console.log('[FOTO] Gagal dapat token:', res ? res.msg : 'no response');
+      dbg('[FOTO] Gagal dapat token:', res ? res.msg : 'no response');
       return;
     }
-    console.log('[FOTO] Token OK, folderId=' + res.folderId);
+    dbg('[FOTO] Token OK, folderId=' + res.folderId);
     
     // Step 2: Upload foto ke Drive menggunakan token
     return uploadToDriveApi(res.token, res.folderId, filename, photoBase64)
       .then(function(fileId) {
-        console.log('[FOTO] uploadToDriveApi result fileId=' + fileId);
-        if (!fileId) { console.log('[FOTO] Upload Drive gagal - no fileId'); return; }
+        dbg('[FOTO] uploadToDriveApi result fileId=' + fileId);
+        if (!fileId) { dbg('[FOTO] Upload Drive gagal - no fileId'); return; }
         
         // Step 3: Notify Apps Script untuk set sharing + update spreadsheet
         return apiGet('updateFotoUrlAfterUpload', {
@@ -1024,21 +1044,21 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
           employeeId: employeeId,
           tipe:       tipe
         }).then(function(upd) {
-          console.log('[FOTO] updateFotoUrl:', JSON.stringify(upd));
+          dbg('[FOTO] updateFotoUrl:', JSON.stringify(upd));
           if (upd && upd.ok) {
-            console.log('[FOTO] Foto berhasil:', upd.url);
+            dbg('[FOTO] Foto berhasil:', upd.url);
           } else {
-            console.log('[FOTO] updateFotoUrl gagal:', upd ? upd.msg : '');
+            dbg('[FOTO] updateFotoUrl gagal:', upd ? upd.msg : '');
           }
         });
       });
   }).catch(function(e) {
-    console.log('[FOTO] uploadFotoChunked ERROR:', e.message || e);
+    dbg('[FOTO] uploadFotoChunked ERROR:', e.message || e);
   });
 }
 
 function uploadToDriveApi(token, folderId, filename, photoBase64) {
-  console.log('[FOTO] uploadToDriveApi start, token length=' + (token ? token.length : 0));
+  dbg('[FOTO] uploadToDriveApi start, token length=' + (token ? token.length : 0));
   
   try {
     var base64Clean = photoBase64.replace(/^data:image\/[^;]+;base64,/, '');
@@ -1048,7 +1068,7 @@ function uploadToDriveApi(token, folderId, filename, photoBase64) {
       byteArr[i] = byteChars.charCodeAt(i);
     }
     var blob = new Blob([byteArr], { type: 'image/jpeg' });
-    console.log('[FOTO] Blob size=' + blob.size);
+    dbg('[FOTO] Blob size=' + blob.size);
 
     var metadata = {
       name:    filename,
@@ -1066,21 +1086,21 @@ function uploadToDriveApi(token, folderId, filename, photoBase64) {
       body: formData
     })
     .then(function(r) {
-      console.log('[FOTO] Drive API response status=' + r.status);
+      dbg('[FOTO] Drive API response status=' + r.status);
       return r.json();
     })
     .then(function(data) {
-      console.log('[FOTO] Drive API data=' + JSON.stringify(data).substring(0, 200));
+      dbg('[FOTO] Drive API data=' + JSON.stringify(data).substring(0, 200));
       if (data && data.id) return data.id;
-      if (data && data.error) console.log('[FOTO] Drive error:', data.error.message);
+      if (data && data.error) dbg('[FOTO] Drive error:', data.error.message);
       return null;
     })
     .catch(function(e) {
-      console.log('[FOTO] fetch Drive API error:', e.message);
+      dbg('[FOTO] fetch Drive API error:', e.message);
       return null;
     });
   } catch(e) {
-    console.log('[FOTO] uploadToDriveApi exception:', e.message);
+    dbg('[FOTO] uploadToDriveApi exception:', e.message);
     return Promise.resolve(null);
   }
 }
