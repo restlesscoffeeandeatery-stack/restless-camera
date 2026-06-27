@@ -990,43 +990,83 @@ function backToMenu() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// UPLOAD FOTO — chunked via GET (bypass CORS & body size limit)
+// UPLOAD FOTO LANGSUNG KE GOOGLE DRIVE API
+// Flow: ambil token dari Apps Script → upload foto ke Drive REST API
+//       → notify Apps Script untuk update URL di spreadsheet
 // ═══════════════════════════════════════════════════════════════
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
-  // Chunk size 50KB — aman untuk URL parameter
-  var CHUNK = 50000;
-  var totalChunks = Math.ceil(photoBase64.length / CHUNK);
-
-  // Step 1: Register upload session
-  apiGet('registerFotoUpload', {
-    sessionId:  sessionId,
+  // Step 1: Ambil OAuth token + folder ID dari Apps Script
+  apiGet('getDriveUploadToken', {
     filename:   filename,
     tanggal:    tanggal,
     employeeId: employeeId,
     tipe:       tipe
-  }).then(function() {
-    // Step 2: Upload chunks satu per satu
-    return uploadNextChunk(sessionId, photoBase64, 0, totalChunks, CHUNK);
+  }).then(function(res) {
+    if (!res || !res.ok) {
+      console.log('Gagal dapat token Drive:', res ? res.msg : 'no response');
+      return;
+    }
+    // Step 2: Upload foto ke Drive menggunakan token
+    return uploadToDriveApi(res.token, res.folderId, filename, photoBase64)
+      .then(function(fileId) {
+        if (!fileId) { console.log('Upload Drive gagal - no fileId'); return; }
+        // Step 3: Notify Apps Script untuk set sharing + update spreadsheet
+        return apiGet('updateFotoUrlAfterUpload', {
+          fileId:     fileId,
+          tanggal:    tanggal,
+          employeeId: employeeId,
+          tipe:       tipe
+        }).then(function(upd) {
+          if (upd && upd.ok) {
+            console.log('Foto OK:', upd.url);
+          } else {
+            console.log('updateFotoUrl gagal:', upd ? upd.msg : '');
+          }
+        });
+      });
   }).catch(function(e) {
-    console.log('Upload foto gagal:', e);
+    console.log('uploadFotoChunked error:', e.message || e);
   });
 }
 
-function uploadNextChunk(sessionId, fullData, idx, total, chunkSize) {
-  var chunk = fullData.substring(idx * chunkSize, (idx + 1) * chunkSize);
-  return apiGet('saveFotoChunk', {
-    sessionId:   sessionId,
-    chunkIndex:  idx,
-    totalChunks: total,
-    chunkData:   chunk
-  }).then(function(res) {
-    if (res && res.done) {
-      console.log('Foto tersimpan: ' + res.url);
-    } else if (idx + 1 < total) {
-      return uploadNextChunk(sessionId, fullData, idx + 1, total, chunkSize);
+function uploadToDriveApi(token, folderId, filename, photoBase64) {
+  // Konversi base64 ke Blob
+  var base64Clean = photoBase64.replace(/^data:image\/[^;]+;base64,/, '');
+  var byteChars   = atob(base64Clean);
+  var byteArr     = new Uint8Array(byteChars.length);
+  for (var i = 0; i < byteChars.length; i++) {
+    byteArr[i] = byteChars.charCodeAt(i);
+  }
+  var blob = new Blob([byteArr], { type: 'image/jpeg' });
+
+  // Metadata file
+  var metadata = {
+    name:    filename,
+    parents: [folderId],
+    mimeType: 'image/jpeg'
+  };
+
+  // Multipart upload ke Drive API
+  var formData = new FormData();
+  formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  formData.append('file', blob);
+
+  return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token },
+    body: formData
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.id) {
+      return data.id;
     }
-  }).catch(function(e) {
-    console.log('Chunk ' + idx + ' error:', e);
+    console.log('Drive API error:', JSON.stringify(data));
+    return null;
+  })
+  .catch(function(e) {
+    console.log('uploadToDriveApi error:', e.message);
+    return null;
   });
 }
 
