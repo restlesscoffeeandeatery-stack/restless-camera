@@ -180,35 +180,47 @@ function useFoto() {
   if (!photoData) return;
   showStatus('Menyimpan foto...');
 
-  // Simpan foto ke localStorage dengan key tetap
+  // Simpan foto ke localStorage
   try {
     localStorage.setItem('absFoto', photoData);
     localStorage.setItem('absFotoStatus', 'ready');
   } catch(e) {
-    // Foto terlalu besar — kompres lebih kecil
     var c = document.getElementById('canvas');
     var kecil = c.toDataURL('image/jpeg', 0.45);
-    localStorage.setItem('absFoto', kecil);
-    localStorage.setItem('absFotoStatus', 'ready');
+    try {
+      localStorage.setItem('absFoto', kecil);
+      localStorage.setItem('absFotoStatus', 'ready');
+    } catch(e2) {}
   }
 
-  // Kembali ke Apps Script
-  if (RETURN_URL) {
-    window.location.href = RETURN_URL;
-  } else {
-    // Fallback: coba history.back dua kali (keluar dari redirect chain)
-    history.go(-2);
-  }
+  // Tutup tab ini — Apps Script di tab sebelumnya akan mendeteksi via storage event
+  showStatus('Foto tersimpan! Menutup...');
+  setTimeout(function() {
+    window.close();
+    // Fallback jika window.close() diblokir
+    setTimeout(function() {
+      document.body.innerHTML =
+        '<div style="background:#0d0d14;color:#e2e8f0;height:100vh;display:flex;' +
+        'flex-direction:column;align-items:center;justify-content:center;gap:16px;' +
+        'font-family:sans-serif;padding:24px;text-align:center">' +
+        '<div style="font-size:48px">✅</div>' +
+        '<div style="font-size:16px;font-weight:600">Foto berhasil!</div>' +
+        '<div style="font-size:14px;color:#64748b">Kembali ke tab absensi<br>dan tap Lanjut</div>' +
+        '<a href="' + (RETURN_URL||'#') + '" style="margin-top:8px;padding:14px 28px;' +
+        'background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;border-radius:10px;' +
+        'text-decoration:none;font-weight:600;font-size:15px">← Kembali ke Absensi</a>' +
+        '</div>';
+    }, 800);
+  }, 300);
 }
 
 function goBack() {
   stopStream();
   try { localStorage.setItem('absFotoStatus', 'cancelled'); } catch(e) {}
-  if (RETURN_URL) {
-    window.location.href = RETURN_URL;
-  } else {
-    history.go(-2);
-  }
+  window.close();
+  setTimeout(function() {
+    if (RETURN_URL) window.location.href = RETURN_URL;
+  }, 500);
 }
 
 function retryCamera() { hideErr(); startCam(); }
