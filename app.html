@@ -377,15 +377,15 @@ canvas{display:none}
 // ═══════════════════════════════════════════════════════════════
 // KONFIGURASI — WAJIB DIISI
 // ═══════════════════════════════════════════════════════════════
-var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyM5wXGf0MeQCrt4ITArM5cF9NJv8EmKxjwox1J06foDK_8GJ_wpcWr1GHu4ycJ2XEb/exec'; // https://script.google.com/macros/s/.../exec
-var KANTOR_LAT = -7.797120;
-var KANTOR_LNG = 110.378116;
-var RADIUS_METER = 2000;
+var WEBAPP_URL = 'GANTI_DENGAN_URL_APPS_SCRIPT_EXEC'; // https://script.google.com/macros/s/.../exec
+var KANTOR_LAT = -7.7785;
+var KANTOR_LNG = 110.3831;
+var RADIUS_METER = 200;
 var SHIFTS = [
-  { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'09:00' },
-  { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'10:00', sampai:'12:59' },
-  { nama:'Middle 2', jamMasuk:'13:00', jamPulang:'21:00', dari:'13:00', sampai:'13:30' },
-  { nama:'Closing',  jamMasuk:'15:00', jamPulang:'23:00', dari:'14:00', sampai:'23:59' }
+  { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'11:59' },
+  { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'12:00', sampai:'12:59' },
+  { nama:'Middle 2', jamMasuk:'13:00', jamPulang:'21:00', dari:'13:00', sampai:'14:59' },
+  { nama:'Closing',  jamMasuk:'15:00', jamPulang:'23:00', dari:'15:00', sampai:'23:59' }
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -594,6 +594,16 @@ function startAbsen(mode) {
   startGps();
 }
 
+// ── GPS CONFIG ───────────────────────────────────────────────
+var GPS_MAX_ACC     = 80;   // Tolak pembacaan dengan akurasi > 80 meter
+var GPS_SAMPLES     = 5;    // Ambil 5 sampel, pilih yang terbaik
+var GPS_TIMEOUT_SEC = 25;   // Timeout total deteksi GPS
+var GPS_MARGIN      = 50;   // Margin tambahan radius (meter) untuk toleransi GPS indoor
+
+var gpsSamples   = [];      // Kumpulan sampel GPS
+var gpsTimeout   = null;    // Timer timeout
+var gpsAttempts  = 0;       // Hitungan percobaan
+
 function resetGpsUI() {
   document.getElementById('gpsDot').className = 'gdot detecting';
   document.getElementById('gpsText').textContent = 'Mendeteksi lokasi...';
@@ -601,56 +611,171 @@ function resetGpsUI() {
   document.getElementById('rbarWrap').style.display = 'none';
   document.getElementById('btnGpsNext').disabled = true;
   clearAlert('gpsAlert');
+  gpsSamples  = [];
+  gpsAttempts = 0;
+  if (gpsTimeout) { clearTimeout(gpsTimeout); gpsTimeout = null; }
 }
 
 function startGps() {
   stopGps();
   if (!navigator.geolocation) { setGpsErr('GPS tidak didukung browser ini.'); return; }
+
+  // Timeout keseluruhan — jika dalam GPS_TIMEOUT_SEC detik belum dapat
+  // sampel yang cukup, pakai yang terbaik yang sudah ada
+  gpsTimeout = setTimeout(function() {
+    stopGps();
+    if (gpsSamples.length > 0) {
+      evaluateBestSample();
+    } else {
+      setGpsErr('GPS timeout. Pastikan berada di area terbuka lalu tap Deteksi Ulang.');
+    }
+  }, GPS_TIMEOUT_SEC * 1000);
+
   gpsWatchId = navigator.geolocation.watchPosition(onGpsOk, onGpsErr, {
-    enableHighAccuracy: true, timeout: 20000, maximumAge: 3000
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0   // Selalu minta data segar, jangan pakai cache
   });
 }
 
 function stopGps() {
   if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+  if (gpsTimeout) { clearTimeout(gpsTimeout); gpsTimeout = null; }
+}
+
+function hitungJarak(lat, lng) {
+  var R = 6371000;
+  var toRad = function(x) { return x * Math.PI / 180; };
+  var dLat = toRad(lng - KANTOR_LNG);  // intentionally using Haversine
+  var dLng = toRad(lat - KANTOR_LAT);
+  // Simplified flat-earth untuk jarak pendek (< 1km) — cukup akurat
+  var dx = (lng - KANTOR_LNG) * Math.cos(toRad(KANTOR_LAT)) * 111320;
+  var dy = (lat - KANTOR_LAT) * 111320;
+  return Math.round(Math.sqrt(dx*dx + dy*dy));
 }
 
 function onGpsOk(pos) {
-  stopGps();
-  var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = Math.round(pos.coords.accuracy);
-  var dLat = lat - KANTOR_LAT, dLng = lng - KANTOR_LNG;
-  var jarak = Math.round(Math.sqrt(dLat*dLat + dLng*dLng) * 111320);
-  state.gpsCoords = { lat: lat, lng: lng, jarak: jarak, acc: acc };
+  var lat = pos.coords.latitude;
+  var lng = pos.coords.longitude;
+  var acc = Math.round(pos.coords.accuracy);
+  gpsAttempts++;
 
-  document.getElementById('gpsDetail').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6) + '  ·  ±' + acc + 'm';
+  // Update UI progres
+  var collected = Math.min(gpsSamples.length + 1, GPS_SAMPLES);
+  document.getElementById('gpsText').textContent =
+    'Mengumpulkan sinyal GPS... (' + collected + '/' + GPS_SAMPLES + ')';
+  document.getElementById('gpsDetail').textContent =
+    lat.toFixed(6) + ', ' + lng.toFixed(6) + '  ·  akurasi ±' + acc + 'm';
+
+  // Simpan sampel (termasuk yang kurang akurat — akan difilter saat evaluasi)
+  gpsSamples.push({ lat: lat, lng: lng, acc: acc, jarak: hitungJarak(lat, lng) });
+
+  // Jika sudah dapat sampel yang sangat akurat (< 30m), langsung pakai
+  if (acc <= 30 && gpsSamples.length >= 2) {
+    stopGps();
+    evaluateBestSample();
+    return;
+  }
+
+  // Jika sudah cukup sampel, evaluasi
+  if (gpsSamples.length >= GPS_SAMPLES) {
+    stopGps();
+    evaluateBestSample();
+  }
+}
+
+function evaluateBestSample() {
+  if (gpsSamples.length === 0) {
+    setGpsErr('Tidak ada data GPS. Tap Deteksi Ulang.');
+    return;
+  }
+
+  // Filter: buang sampel dengan akurasi sangat buruk (> GPS_MAX_ACC)
+  // kecuali jika semua sampel buruk — dalam hal itu pakai semua
+  var goodSamples = gpsSamples.filter(function(s) { return s.acc <= GPS_MAX_ACC; });
+  var useSamples  = goodSamples.length >= 2 ? goodSamples : gpsSamples;
+
+  // Pilih sampel terbaik = akurasi terkecil
+  useSamples.sort(function(a, b) { return a.acc - b.acc; });
+  var best = useSamples[0];
+
+  // Jika ada beberapa sampel akurat, rata-ratakan 3 terbaik untuk koordinat
+  if (useSamples.length >= 3) {
+    var top3  = useSamples.slice(0, 3);
+    var avgLat = (top3[0].lat + top3[1].lat + top3[2].lat) / 3;
+    var avgLng = (top3[0].lng + top3[1].lng + top3[2].lng) / 3;
+    best = { lat: avgLat, lng: avgLng, acc: top3[0].acc, jarak: hitungJarak(avgLat, avgLng) };
+  }
+
+  var jarak = best.jarak;
+  var acc   = best.acc;
+
+  // Simpan ke state
+  state.gpsCoords = { lat: best.lat, lng: best.lng, jarak: jarak, acc: acc };
+
+  // Update UI
+  document.getElementById('gpsDetail').textContent =
+    best.lat.toFixed(6) + ', ' + best.lng.toFixed(6) + '  ·  akurasi ±' + acc + 'm' +
+    (gpsSamples.length > 1 ? ' (' + gpsSamples.length + ' sampel)' : '');
   document.getElementById('rbarWrap').style.display = 'block';
   document.getElementById('rbarLabel').textContent = jarak + 'm / ' + RADIUS_METER + 'm';
-  var pct = Math.min(jarak / RADIUS_METER * 100, 100);
-  var fill = document.getElementById('rbarFill');
-  fill.style.width = pct + '%';
-  fill.style.background = jarak <= RADIUS_METER ? '#10b981' : '#ef4444';
 
-  if (jarak <= RADIUS_METER) {
+  var pct  = Math.min(jarak / RADIUS_METER * 100, 100);
+  var fill = document.getElementById('rbarFill');
+  fill.style.width    = pct + '%';
+  fill.style.background = jarak <= (RADIUS_METER + GPS_MARGIN) ? '#10b981' : '#ef4444';
+
+  // Radius efektif = RADIUS_METER + GPS_MARGIN (toleransi indoor)
+  var radiusEfektif = RADIUS_METER + GPS_MARGIN;
+
+  if (jarak <= radiusEfektif) {
     document.getElementById('gpsDot').className = 'gdot ok';
-    document.getElementById('gpsText').textContent = '✅ Dalam jangkauan (' + jarak + 'm dari kantor)';
+    document.getElementById('gpsText').textContent =
+      '✅ Dalam jangkauan (' + jarak + 'm dari kantor)';
     document.getElementById('btnGpsNext').disabled = false;
     clearAlert('gpsAlert');
+
+    // Peringatan jika akurasi GPS buruk tapi masih diizinkan
+    if (acc > GPS_MAX_ACC) {
+      showAlert('gpsAlert',
+        '⚠️ Sinyal GPS lemah (akurasi ±' + acc + 'm). Lokasi mungkin kurang tepat, tapi absensi tetap diizinkan.',
+        'warning');
+    }
   } else {
     document.getElementById('gpsDot').className = 'gdot err';
-    document.getElementById('gpsText').textContent = '❌ Di luar jangkauan (' + jarak + 'm)';
-    showAlert('gpsAlert', 'Anda terlalu jauh dari kantor. Pastikan berada di Restless Coffee & Eatery.', 'error');
+    document.getElementById('gpsText').textContent = '❌ Di luar jangkauan (' + jarak + 'm dari kantor)';
+
+    var pesanErr = 'Anda terdeteksi ' + jarak + 'm dari kantor (maks ' + RADIUS_METER + 'm). ';
+    if (acc > 50) {
+      pesanErr += 'Sinyal GPS lemah (akurasi +/-' + acc + 'm). Coba ke area lebih terbuka atau tunggu sinyal lebih kuat.';
+    } else {
+      pesanErr += 'Pastikan Anda berada di Restless Coffee & Eatery.';
+    }
+    showAlert('gpsAlert', pesanErr, 'error');
   }
 }
 
 function onGpsErr(err) {
-  var msgs = {1:'Izin lokasi ditolak. Aktifkan GPS di pengaturan browser.',2:'Sinyal GPS tidak tersedia.',3:'Timeout. Tap Deteksi Ulang.'};
-  setGpsErr(msgs[err.code] || 'Gagal mendapat lokasi.');
+  var msgs = {
+    1: 'Izin lokasi ditolak. Aktifkan di Pengaturan → Privasi → Lokasi → Chrome → Izinkan.',
+    2: 'Sinyal GPS tidak tersedia. Pindah ke area lebih terbuka.',
+    3: 'GPS timeout. Tap Deteksi Ulang.'
+  };
+  // Jika sudah ada beberapa sampel sebelum error, evaluasi dengan yang ada
+  if (gpsSamples.length >= 2) {
+    stopGps();
+    evaluateBestSample();
+    return;
+  }
+  setGpsErr(msgs[err.code] || 'Gagal mendapat lokasi: ' + err.message);
 }
+
 function setGpsErr(msg) {
   document.getElementById('gpsDot').className = 'gdot err';
-  document.getElementById('gpsText').textContent = 'Gagal';
+  document.getElementById('gpsText').textContent = 'Gagal mendapatkan lokasi';
   showAlert('gpsAlert', msg, 'error');
 }
+
 function retryGps() { resetGpsUI(); startGps(); }
 function cancelGps() { stopGps(); showScreen('s2'); }
 
