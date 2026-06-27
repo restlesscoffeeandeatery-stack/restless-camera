@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kamera Absensi</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:sans-serif}
+
+/* VIDEO FULLSCREEN */
+#videoWrap{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center}
+#video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+
+/* OVAL GUIDE */
+#guide{position:fixed;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.oval{width:58vw;max-width:220px;aspect-ratio:3/4;border:2.5px solid rgba(255,255,255,.55);border-radius:50%}
+
+/* TOP BAR */
+#topBar{position:fixed;top:0;left:0;right:0;z-index:10;
+  padding:env(safe-area-inset-top,12px) 16px 16px;
+  background:linear-gradient(rgba(0,0,0,.75),transparent);
+  display:flex;align-items:center;gap:12px}
+#btnBack{background:rgba(255,255,255,.18);border:none;border-radius:50%;
+  width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#topTitle{color:#fff;font-size:15px;font-weight:600;flex:1}
+#btnFlip{background:rgba(255,255,255,.18);border:none;border-radius:50%;
+  width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+
+/* BOTTOM BAR */
+#bottomBar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  padding:20px 20px env(safe-area-inset-bottom,28px);
+  background:linear-gradient(transparent,rgba(0,0,0,.75));
+  display:flex;align-items:center;justify-content:center}
+#btnShutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;
+  background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;
+  font-size:32px;cursor:pointer;transition:transform .12s;touch-action:manipulation}
+#btnShutter:active{transform:scale(.88)}
+
+/* STATUS */
+#statusBar{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
+  color:#fff;font-size:14px;text-align:center;background:rgba(0,0,0,.65);
+  padding:14px 22px;border-radius:12px;display:none;max-width:82vw;line-height:1.6}
+
+/* ERROR SCREEN */
+#errScreen{position:fixed;inset:0;z-index:30;background:#0d0d14;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px;text-align:center;gap:14px}
+#errIcon{font-size:52px}
+#errMsg{color:#e2e8f0;font-size:14px;line-height:1.7;white-space:pre-line}
+.eBtn{padding:14px 28px;border-radius:10px;border:none;font-size:15px;
+  font-weight:600;cursor:pointer;touch-action:manipulation;width:100%;max-width:280px}
+.eBtn-primary{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;margin-top:4px}
+.eBtn-ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#e2e8f0}
+
+/* PREVIEW SCREEN */
+#prevScreen{position:fixed;inset:0;z-index:30;background:#000;
+  display:none;flex-direction:column;align-items:center;justify-content:center}
+#prevImg{max-width:100%;max-height:72vh;object-fit:contain}
+#prevBar{position:fixed;bottom:0;left:0;right:0;
+  padding:16px 16px env(safe-area-inset-bottom,24px);
+  background:linear-gradient(transparent,rgba(0,0,0,.9));
+  display:flex;gap:12px}
+.pBtn{flex:1;padding:15px;border-radius:10px;border:none;
+  font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.pBtn-ok{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff}
+.pBtn-re{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
+
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<!-- Kamera -->
+<div id="videoWrap">
+  <video id="video" autoplay playsinline muted webkit-playsinline></video>
+</div>
+<div id="guide"><div class="oval"></div></div>
+
+<div id="topBar">
+  <button id="btnBack" onclick="goBack()">←</button>
+  <div id="topTitle">📸 Foto Selfie</div>
+  <button id="btnFlip" onclick="flipCam()" title="Ganti kamera">🔄</button>
+</div>
+<div id="bottomBar">
+  <button id="btnShutter" onclick="snap()">📷</button>
+</div>
+
+<!-- Status -->
+<div id="statusBar"></div>
+
+<!-- Error -->
+<div id="errScreen">
+  <div id="errIcon">📵</div>
+  <div id="errMsg"></div>
+  <button class="eBtn eBtn-primary" onclick="retryCamera()">🔄 Coba Lagi</button>
+  <button class="eBtn eBtn-ghost" onclick="goBack()">← Kembali</button>
+</div>
+
+<!-- Preview -->
+<div id="prevScreen">
+  <img id="prevImg" src="" alt="preview">
+  <div id="prevBar">
+    <button class="pBtn pBtn-re" onclick="retake()">🔄 Ulang</button>
+    <button class="pBtn pBtn-ok" onclick="useFoto()">✅ Gunakan</button>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+var stream = null;
+var facing = 'user';
+var photoData = null;
+
+// Ambil state dari sessionStorage (dikirim halaman utama)
+var state = {};
+try { state = JSON.parse(sessionStorage.getItem('absState') || '{}'); } catch(e) {}
+if (state.title) document.getElementById('topTitle').textContent = state.title;
+
+// Langsung mulai kamera
+startCam();
+
+function startCam() {
+  showStatus('Membuka kamera...');
+  hideErr();
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showErr('Browser ini tidak mendukung kamera.\nGunakan Chrome versi terbaru.');
+    return;
+  }
+
+  var c = { video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false };
+
+  navigator.mediaDevices.getUserMedia(c)
+    .then(gotStream)
+    .catch(function(e1) {
+      // Fallback tanpa constraint resolusi
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false })
+        .then(gotStream)
+        .catch(function(e2) {
+          // Fallback paling minimal
+          navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(gotStream)
+            .catch(function(e3) { handleErr(e3); });
+        });
+    });
+}
+
+function gotStream(s) {
+  stream = s;
+  var v = document.getElementById('video');
+  v.srcObject = s;
+  v.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  v.onloadedmetadata = function() {
+    v.play().catch(function(){});
+    hideStatus();
+  };
+  // Fallback play
+  setTimeout(function(){ if(v.paused) v.play().catch(function(){}); }, 1500);
+}
+
+function handleErr(err) {
+  var msg = '';
+  if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+    msg = 'Izin kamera ditolak.\n\nCara mengizinkan:\n1. Tap ikon 🔒 di address bar\n2. Tap "Izin situs"\n3. Kamera → pilih "Izinkan"\n4. Refresh halaman, lalu tap Coba Lagi';
+  } else if (err.name === 'NotFoundError') {
+    msg = 'Tidak ada kamera yang ditemukan di perangkat ini.';
+  } else if (err.name === 'NotReadableError') {
+    msg = 'Kamera sedang digunakan aplikasi lain.\nTutup aplikasi kamera lain lalu tap Coba Lagi.';
+  } else {
+    msg = 'Kamera gagal dibuka.\n(' + (err.name || err.message) + ')';
+  }
+  showErr(msg);
+}
+
+function flipCam() {
+  facing = facing === 'user' ? 'environment' : 'user';
+  stopStream();
+  startCam();
+}
+
+function snap() {
+  var v = document.getElementById('video');
+  if (!stream || v.readyState < 2 || v.videoWidth === 0) {
+    showStatus('⏳ Kamera belum siap...');
+    setTimeout(hideStatus, 1500);
+    return;
+  }
+  var c = document.getElementById('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  var ctx = c.getContext('2d');
+  if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
+  ctx.drawImage(v, 0, 0);
+  photoData = c.toDataURL('image/jpeg', 0.88);
+  stopStream();
+  document.getElementById('prevImg').src = photoData;
+  document.getElementById('prevScreen').style.display = 'flex';
+}
+
+function retake() {
+  photoData = null;
+  document.getElementById('prevScreen').style.display = 'none';
+  startCam();
+}
+
+function useFoto() {
+  if (!photoData) return;
+  // Simpan foto ke sessionStorage lalu kembali ke halaman utama
+  try {
+    sessionStorage.setItem('absPhoto', photoData);
+    sessionStorage.setItem('absPhotoReady', '1');
+  } catch(e) {
+    // sessionStorage penuh — foto terlalu besar, kompres ulang
+    var c = document.getElementById('canvas');
+    var small = c.toDataURL('image/jpeg', 0.55);
+    sessionStorage.setItem('absPhoto', small);
+    sessionStorage.setItem('absPhotoReady', '1');
+  }
+  // Kembali ke halaman utama
+  history.back();
+}
+
+function goBack() {
+  stopStream();
+  sessionStorage.removeItem('absPhotoReady');
+  history.back();
+}
+
+function retryCamera() { hideErr(); startCam(); }
+
+function stopStream() {
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  var v = document.getElementById('video');
+  if (v) v.srcObject = null;
+}
+
+function showStatus(msg) {
+  var el = document.getElementById('statusBar');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideStatus() { document.getElementById('statusBar').style.display = 'none'; }
+
+function showErr(msg) {
+  hideStatus();
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errScreen').style.display = 'flex';
+}
+function hideErr() { document.getElementById('errScreen').style.display = 'none'; }
+</script>
+</body>
+</html>
