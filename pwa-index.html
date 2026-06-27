@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Absensi Restless</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6c63ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Absensi Restless">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;min-height:100vh;background:#0d0d14;
+  font-family:'Inter',sans-serif;color:#e2e8f0;
+  display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#161622;border:1px solid #2a2a3e;border-radius:20px;
+  padding:40px 28px;text-align:center;max-width:400px;width:100%;
+  position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#6c63ff,#a78bfa)}
+.logo{width:88px;height:88px;background:linear-gradient(135deg,#6c63ff,#a78bfa);
+  border-radius:24px;display:inline-flex;align-items:center;justify-content:center;
+  margin-bottom:20px;box-shadow:0 12px 40px rgba(108,99,255,.4)}
+.logo img{width:60px;height:60px;object-fit:contain}
+h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.sub{font-size:14px;color:#64748b;margin-bottom:32px;line-height:1.5}
+
+.install-steps{background:#1e1e2e;border-radius:12px;padding:20px;
+  margin-bottom:24px;text-align:left}
+.install-steps h3{font-size:14px;font-weight:600;margin-bottom:14px;
+  color:#a78bfa;text-transform:uppercase;letter-spacing:.5px}
+.step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.step:last-child{margin-bottom:0}
+.step-num{width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,#6c63ff,#a78bfa);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;color:#94a3b8;line-height:1.5}
+.step-text strong{color:#e2e8f0}
+
+.btn-install{display:block;width:100%;padding:15px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;
+  font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;
+  box-shadow:0 4px 20px rgba(108,99,255,.3);text-decoration:none}
+.btn-open{display:block;width:100%;padding:15px;border-radius:10px;
+  background:transparent;border:1px solid #2a2a3e;color:#64748b;
+  font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;text-align:center}
+.btn-open:hover{border-color:#6c63ff;color:#6c63ff}
+
+.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.1);
+  color:#10b981;border:1px solid rgba(16,185,129,.2);border-radius:20px;
+  font-size:12px;font-weight:600;padding:4px 12px;margin-bottom:20px}
+
+#installBtn{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <img src="icon-192.png" alt="Absensi Restless">
+  </div>
+  <h1>Absensi Restless</h1>
+  <p class="sub">Restless Coffee &amp; Eatery<br>Sistem Absensi Karyawan</p>
+  <div class="badge">☕ Versi PWA</div>
+
+  <div class="install-steps" id="stepsAndroid" style="display:none">
+    <h3>📲 Install di Android</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Tap tombol <strong>"Install Aplikasi"</strong> di bawah</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Pilih <strong>"Install"</strong> saat popup muncul</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Icon <strong>Absensi Restless</strong> akan muncul di homescreen</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Buka app → izinkan kamera → absen seperti biasa</div>
+    </div>
+  </div>
+
+  <div class="install-steps" id="stepsIOS" style="display:none">
+    <h3>📲 Install di iPhone/iPad</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Tap ikon <strong>Share</strong> (□↑) di bawah layar Safari</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Scroll ke bawah, pilih <strong>"Add to Home Screen"</strong></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Tap <strong>"Add"</strong> di pojok kanan atas</div>
+    </div>
+  </div>
+
+  <button class="btn-install" id="installBtn" onclick="installPWA()">
+    📲 Install Aplikasi
+  </button>
+  <a href="camera.html" class="btn-open">
+    🌐 Buka Langsung di Browser
+  </a>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/restless-camera/sw.js');
+}
+
+var deferredPrompt = null;
+var isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+var isAndroid = /android/.test(navigator.userAgent.toLowerCase());
+var isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+if (isStandalone) {
+  // Sudah terinstall — langsung redirect ke kamera
+  window.location.href = 'camera.html';
+} else if (isIOS) {
+  document.getElementById('stepsIOS').style.display = 'block';
+} else if (isAndroid) {
+  document.getElementById('stepsAndroid').style.display = 'block';
+}
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'block';
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(result) {
+    deferredPrompt = null;
+    if (result.outcome === 'accepted') {
+      document.getElementById('installBtn').textContent = '✅ Berhasil diinstall!';
+      document.getElementById('installBtn').disabled = true;
+    }
+  });
+}
+</script>
+</body>
+</html>

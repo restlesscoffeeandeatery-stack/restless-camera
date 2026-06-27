@@ -1,0 +1,27 @@
+{
+  "name": "Absensi Restless",
+  "short_name": "Absensi",
+  "description": "Sistem Absensi Karyawan Restless Coffee & Eatery",
+  "start_url": "/restless-camera/camera.html",
+  "scope": "/restless-camera/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d14",
+  "theme_color": "#6c63ff",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "id"
+}
