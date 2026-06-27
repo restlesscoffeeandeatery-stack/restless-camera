@@ -30,8 +30,9 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:san
   font-size:32px;cursor:pointer;transition:transform .12s;touch-action:manipulation}
 #btnShutter:active{transform:scale(.88)}
 #statusBar{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
-  color:#fff;font-size:14px;text-align:center;background:rgba(0,0,0,.7);
-  padding:14px 22px;border-radius:12px;display:none;max-width:82vw;line-height:1.6}
+  color:#fff;font-size:14px;text-align:center;background:rgba(0,0,0,.8);
+  padding:16px 24px;border-radius:12px;display:none;max-width:85vw;line-height:1.7;
+  white-space:pre-line}
 #errScreen{position:fixed;inset:0;z-index:30;background:#0d0d14;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:28px;text-align:center;gap:14px}
@@ -50,6 +51,9 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:san
   font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
 .pBtn-ok{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff}
 .pBtn-re{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
+#doneScreen{position:fixed;inset:0;z-index:40;background:#0d0d14;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px;text-align:center;gap:16px}
 canvas{display:none}
 </style>
 </head>
@@ -81,6 +85,19 @@ canvas{display:none}
     <button class="pBtn pBtn-ok" onclick="useFoto()">✅ Gunakan</button>
   </div>
 </div>
+<div id="doneScreen">
+  <div style="font-size:64px">✅</div>
+  <div style="color:#e2e8f0;font-size:18px;font-weight:600">Foto Terkirim!</div>
+  <div style="color:#64748b;font-size:14px;line-height:1.6">
+    Kembali ke tab absensi.<br>Absensi akan otomatis melanjutkan.
+  </div>
+  <a id="btnKembali" href="#"
+     style="margin-top:8px;padding:14px 28px;
+     background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;
+     border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">
+    ← Kembali ke Absensi
+  </a>
+</div>
 <canvas id="canvas"></canvas>
 
 <script>
@@ -88,9 +105,22 @@ var stream = null;
 var facing = 'user';
 var photoData = null;
 
-// Baca returnUrl dari localStorage (disimpan Apps Script sebelum navigasi)
-var RETURN_URL = '';
-try { RETURN_URL = localStorage.getItem('absReturnUrl') || ''; } catch(e) {}
+// Baca parameter dari URL
+var params = {};
+try {
+  var search = window.location.search.substring(1);
+  search.split('&').forEach(function(p) {
+    var kv = p.split('=');
+    if (kv[0]) params[kv[0]] = decodeURIComponent(kv[1] || '');
+  });
+} catch(e) {}
+
+var SESSION_ID  = params.sid || '';
+var WEBAPP_URL  = params.url || '';
+var RETURN_URL  = params.ret || '';
+
+if (params.title) document.getElementById('topTitle').textContent = params.title;
+if (RETURN_URL) document.getElementById('btnKembali').href = RETURN_URL;
 
 startCam();
 
@@ -104,15 +134,13 @@ function startCam() {
   tryGetCamera({ video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false });
 }
 
-function tryGetCamera(constraints) {
-  navigator.mediaDevices.getUserMedia(constraints)
+function tryGetCamera(c) {
+  navigator.mediaDevices.getUserMedia(c)
     .then(gotStream)
     .catch(function(e) {
-      if (constraints.video.width) {
-        // Coba tanpa resolusi spesifik
+      if (c.video && c.video.width) {
         tryGetCamera({ video: { facingMode: facing }, audio: false });
-      } else if (constraints.video.facingMode) {
-        // Coba tanpa facingMode
+      } else if (c.video && c.video.facingMode) {
         tryGetCamera({ video: true, audio: false });
       } else {
         handleErr(e);
@@ -125,31 +153,27 @@ function gotStream(s) {
   var v = document.getElementById('video');
   v.srcObject = s;
   v.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
-  v.onloadedmetadata = function() {
-    v.play().catch(function(){});
-    hideStatus();
-  };
+  v.onloadedmetadata = function() { v.play().catch(function(){}); hideStatus(); };
   setTimeout(function() { if (v.paused) { v.play().catch(function(){}); hideStatus(); } }, 1500);
 }
 
 function handleErr(err) {
   var msg = '';
   if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-    msg = 'Izin kamera ditolak.\n\nCara mengizinkan di Chrome:\n1. Tap ikon 🔒 di address bar\n2. Tap "Izin situs"\n3. Kamera → pilih "Izinkan"\n4. Tap tombol Coba Lagi';
+    msg = 'Izin kamera ditolak.\n\nCara mengizinkan:\n1. Tap ikon 🔒 di address bar\n2. Tap "Izin situs"\n3. Kamera → pilih "Izinkan"\n4. Tap Coba Lagi';
   } else if (err.name === 'NotFoundError') {
-    msg = 'Kamera tidak ditemukan di perangkat ini.';
+    msg = 'Kamera tidak ditemukan.';
   } else if (err.name === 'NotReadableError') {
     msg = 'Kamera sedang dipakai aplikasi lain.\nTutup aplikasi lain lalu tap Coba Lagi.';
   } else {
-    msg = 'Kamera gagal dibuka.\n(' + (err.name||'') + ': ' + (err.message||'') + ')';
+    msg = 'Kamera gagal dibuka.\n(' + (err.name||'') + ')';
   }
   showErr(msg);
 }
 
 function flipCam() {
   facing = facing === 'user' ? 'environment' : 'user';
-  stopStream();
-  startCam();
+  stopStream(); startCam();
 }
 
 function snap() {
@@ -177,50 +201,38 @@ function retake() {
 }
 
 function useFoto() {
-  if (!photoData) return;
-  showStatus('Menyimpan foto...');
-
-  // Simpan foto ke localStorage
-  try {
-    localStorage.setItem('absFoto', photoData);
-    localStorage.setItem('absFotoStatus', 'ready');
-  } catch(e) {
-    var c = document.getElementById('canvas');
-    var kecil = c.toDataURL('image/jpeg', 0.45);
-    try {
-      localStorage.setItem('absFoto', kecil);
-      localStorage.setItem('absFotoStatus', 'ready');
-    } catch(e2) {}
+  if (!photoData || !SESSION_ID || !WEBAPP_URL) {
+    showStatus('❌ Data tidak lengkap.\nSID: ' + SESSION_ID + '\nURL: ' + (WEBAPP_URL ? 'OK' : 'kosong'));
+    return;
   }
 
-  // Tutup tab ini — Apps Script di tab sebelumnya akan mendeteksi via storage event
-  showStatus('Foto tersimpan! Menutup...');
-  setTimeout(function() {
-    window.close();
-    // Fallback jika window.close() diblokir
-    setTimeout(function() {
-      document.body.innerHTML =
-        '<div style="background:#0d0d14;color:#e2e8f0;height:100vh;display:flex;' +
-        'flex-direction:column;align-items:center;justify-content:center;gap:16px;' +
-        'font-family:sans-serif;padding:24px;text-align:center">' +
-        '<div style="font-size:48px">✅</div>' +
-        '<div style="font-size:16px;font-weight:600">Foto berhasil!</div>' +
-        '<div style="font-size:14px;color:#64748b">Kembali ke tab absensi<br>dan tap Lanjut</div>' +
-        '<a href="' + (RETURN_URL||'#') + '" style="margin-top:8px;padding:14px 28px;' +
-        'background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;border-radius:10px;' +
-        'text-decoration:none;font-weight:600;font-size:15px">← Kembali ke Absensi</a>' +
-        '</div>';
-    }, 800);
-  }, 300);
+  document.getElementById('prevScreen').style.display = 'none';
+  showStatus('📤 Mengirim foto...');
+
+  // Upload foto ke Apps Script via fetch POST
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: SESSION_ID, photo: photoData })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      hideStatus();
+      document.getElementById('doneScreen').style.display = 'flex';
+    } else {
+      showStatus('❌ Gagal kirim: ' + (data.msg || 'unknown'));
+    }
+  })
+  .catch(function(err) {
+    showStatus('❌ Error: ' + err.message);
+  });
 }
 
 function goBack() {
   stopStream();
-  try { localStorage.setItem('absFotoStatus', 'cancelled'); } catch(e) {}
-  window.close();
-  setTimeout(function() {
-    if (RETURN_URL) window.location.href = RETURN_URL;
-  }, 500);
+  if (RETURN_URL) window.location.href = RETURN_URL;
+  else window.close();
 }
 
 function retryCamera() { hideErr(); startCam(); }
