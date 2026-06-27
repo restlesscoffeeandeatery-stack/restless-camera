@@ -3,105 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Kamera Absensi</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:sans-serif}
-
-/* VIDEO FULLSCREEN */
-#videoWrap{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center}
+#videoWrap{position:fixed;inset:0;background:#111}
 #video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
-
-/* OVAL GUIDE */
 #guide{position:fixed;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
 .oval{width:58vw;max-width:220px;aspect-ratio:3/4;border:2.5px solid rgba(255,255,255,.55);border-radius:50%}
-
-/* TOP BAR */
-#topBar{position:fixed;top:0;left:0;right:0;z-index:10;
-  padding:env(safe-area-inset-top,12px) 16px 16px;
+#topBar{position:fixed;top:0;left:0;right:0;z-index:10;padding:16px;
   background:linear-gradient(rgba(0,0,0,.75),transparent);
   display:flex;align-items:center;gap:12px}
-#btnBack{background:rgba(255,255,255,.18);border:none;border-radius:50%;
-  width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-#topTitle{color:#fff;font-size:15px;font-weight:600;flex:1}
-#btnFlip{background:rgba(255,255,255,.18);border:none;border-radius:50%;
+#btnBack{background:rgba(255,255,255,.2);border:none;border-radius:50%;
   width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;
   display:flex;align-items:center;justify-content:center}
-
-/* BOTTOM BAR */
+#topTitle{color:#fff;font-size:15px;font-weight:600;flex:1}
+#btnFlip{background:rgba(255,255,255,.2);border:none;border-radius:50%;
+  width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
 #bottomBar{position:fixed;bottom:0;left:0;right:0;z-index:10;
-  padding:20px 20px env(safe-area-inset-bottom,28px);
+  padding:20px 20px 36px;
   background:linear-gradient(transparent,rgba(0,0,0,.75));
   display:flex;align-items:center;justify-content:center}
 #btnShutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;
   background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;
   font-size:32px;cursor:pointer;transition:transform .12s;touch-action:manipulation}
 #btnShutter:active{transform:scale(.88)}
-
-/* STATUS */
 #statusBar{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
-  color:#fff;font-size:14px;text-align:center;background:rgba(0,0,0,.65);
+  color:#fff;font-size:14px;text-align:center;background:rgba(0,0,0,.7);
   padding:14px 22px;border-radius:12px;display:none;max-width:82vw;line-height:1.6}
-
-/* ERROR SCREEN */
 #errScreen{position:fixed;inset:0;z-index:30;background:#0d0d14;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:28px;text-align:center;gap:14px}
-#errIcon{font-size:52px}
-#errMsg{color:#e2e8f0;font-size:14px;line-height:1.7;white-space:pre-line}
+#errMsg{color:#e2e8f0;font-size:14px;line-height:1.7;white-space:pre-line;margin-top:8px}
 .eBtn{padding:14px 28px;border-radius:10px;border:none;font-size:15px;
   font-weight:600;cursor:pointer;touch-action:manipulation;width:100%;max-width:280px}
 .eBtn-primary{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;margin-top:4px}
-.eBtn-ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#e2e8f0}
-
-/* PREVIEW SCREEN */
+.eBtn-ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#e2e8f0;margin-top:6px}
 #prevScreen{position:fixed;inset:0;z-index:30;background:#000;
   display:none;flex-direction:column;align-items:center;justify-content:center}
 #prevImg{max-width:100%;max-height:72vh;object-fit:contain}
 #prevBar{position:fixed;bottom:0;left:0;right:0;
-  padding:16px 16px env(safe-area-inset-bottom,24px);
-  background:linear-gradient(transparent,rgba(0,0,0,.9));
+  padding:16px 16px 32px;background:linear-gradient(transparent,rgba(0,0,0,.9));
   display:flex;gap:12px}
 .pBtn{flex:1;padding:15px;border-radius:10px;border:none;
   font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
 .pBtn-ok{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff}
 .pBtn-re{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
-
 canvas{display:none}
 </style>
 </head>
 <body>
 
-<!-- Kamera -->
 <div id="videoWrap">
   <video id="video" autoplay playsinline muted webkit-playsinline></video>
 </div>
 <div id="guide"><div class="oval"></div></div>
-
 <div id="topBar">
   <button id="btnBack" onclick="goBack()">←</button>
   <div id="topTitle">📸 Foto Selfie</div>
-  <button id="btnFlip" onclick="flipCam()" title="Ganti kamera">🔄</button>
+  <button id="btnFlip" onclick="flipCam()">🔄</button>
 </div>
 <div id="bottomBar">
   <button id="btnShutter" onclick="snap()">📷</button>
 </div>
-
-<!-- Status -->
 <div id="statusBar"></div>
-
-<!-- Error -->
 <div id="errScreen">
-  <div id="errIcon">📵</div>
+  <div style="font-size:52px">📵</div>
   <div id="errMsg"></div>
   <button class="eBtn eBtn-primary" onclick="retryCamera()">🔄 Coba Lagi</button>
   <button class="eBtn eBtn-ghost" onclick="goBack()">← Kembali</button>
 </div>
-
-<!-- Preview -->
 <div id="prevScreen">
   <img id="prevImg" src="" alt="preview">
   <div id="prevBar">
@@ -109,7 +81,6 @@ canvas{display:none}
     <button class="pBtn pBtn-ok" onclick="useFoto()">✅ Gunakan</button>
   </div>
 </div>
-
 <canvas id="canvas"></canvas>
 
 <script>
@@ -117,44 +88,35 @@ var stream = null;
 var facing = 'user';
 var photoData = null;
 
-// Ambil state dari URL parameter (lebih reliable dari sessionStorage lintas domain)
-var state = {};
-try {
-  var params = new URLSearchParams(window.location.search);
-  var stateParam = params.get('state');
-  if (stateParam) state = JSON.parse(decodeURIComponent(stateParam));
-} catch(e) {}
-if (state.title) document.getElementById('topTitle').textContent = state.title;
+// Baca returnUrl dari localStorage (disimpan Apps Script sebelum navigasi)
+var RETURN_URL = '';
+try { RETURN_URL = localStorage.getItem('absReturnUrl') || ''; } catch(e) {}
 
-// URL halaman utama Apps Script (untuk kirim balik foto)
-var RETURN_URL = state.returnUrl || '';
-
-// Langsung mulai kamera
 startCam();
 
 function startCam() {
   showStatus('Membuka kamera...');
   hideErr();
-
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showErr('Browser ini tidak mendukung kamera.\nGunakan Chrome versi terbaru.');
+    showErr('Browser tidak mendukung kamera.\nGunakan Chrome versi terbaru.');
     return;
   }
+  tryGetCamera({ video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false });
+}
 
-  var c = { video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false };
-
-  navigator.mediaDevices.getUserMedia(c)
+function tryGetCamera(constraints) {
+  navigator.mediaDevices.getUserMedia(constraints)
     .then(gotStream)
-    .catch(function(e1) {
-      // Fallback tanpa constraint resolusi
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false })
-        .then(gotStream)
-        .catch(function(e2) {
-          // Fallback paling minimal
-          navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-            .then(gotStream)
-            .catch(function(e3) { handleErr(e3); });
-        });
+    .catch(function(e) {
+      if (constraints.video.width) {
+        // Coba tanpa resolusi spesifik
+        tryGetCamera({ video: { facingMode: facing }, audio: false });
+      } else if (constraints.video.facingMode) {
+        // Coba tanpa facingMode
+        tryGetCamera({ video: true, audio: false });
+      } else {
+        handleErr(e);
+      }
     });
 }
 
@@ -167,20 +129,19 @@ function gotStream(s) {
     v.play().catch(function(){});
     hideStatus();
   };
-  // Fallback play
-  setTimeout(function(){ if(v.paused) v.play().catch(function(){}); }, 1500);
+  setTimeout(function() { if (v.paused) { v.play().catch(function(){}); hideStatus(); } }, 1500);
 }
 
 function handleErr(err) {
   var msg = '';
   if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-    msg = 'Izin kamera ditolak.\n\nCara mengizinkan:\n1. Tap ikon 🔒 di address bar\n2. Tap "Izin situs"\n3. Kamera → pilih "Izinkan"\n4. Refresh halaman, lalu tap Coba Lagi';
+    msg = 'Izin kamera ditolak.\n\nCara mengizinkan di Chrome:\n1. Tap ikon 🔒 di address bar\n2. Tap "Izin situs"\n3. Kamera → pilih "Izinkan"\n4. Tap tombol Coba Lagi';
   } else if (err.name === 'NotFoundError') {
-    msg = 'Tidak ada kamera yang ditemukan di perangkat ini.';
+    msg = 'Kamera tidak ditemukan di perangkat ini.';
   } else if (err.name === 'NotReadableError') {
-    msg = 'Kamera sedang digunakan aplikasi lain.\nTutup aplikasi kamera lain lalu tap Coba Lagi.';
+    msg = 'Kamera sedang dipakai aplikasi lain.\nTutup aplikasi lain lalu tap Coba Lagi.';
   } else {
-    msg = 'Kamera gagal dibuka.\n(' + (err.name || err.message) + ')';
+    msg = 'Kamera gagal dibuka.\n(' + (err.name||'') + ': ' + (err.message||'') + ')';
   }
   showErr(msg);
 }
@@ -202,8 +163,8 @@ function snap() {
   c.width = v.videoWidth; c.height = v.videoHeight;
   var ctx = c.getContext('2d');
   if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
-  ctx.drawImage(v, 0, 0);
-  photoData = c.toDataURL('image/jpeg', 0.88);
+  ctx.drawImage(v,0,0);
+  photoData = c.toDataURL('image/jpeg', 0.82);
   stopStream();
   document.getElementById('prevImg').src = photoData;
   document.getElementById('prevScreen').style.display = 'flex';
@@ -217,42 +178,36 @@ function retake() {
 
 function useFoto() {
   if (!photoData) return;
+  showStatus('Menyimpan foto...');
 
-  // Kompres foto agar muat di URL / localStorage
-  var canvas = document.getElementById('canvas');
-  var compressed = canvas.toDataURL('image/jpeg', 0.72);
-
-  // Simpan ke localStorage (bisa diakses dari domain manapun selama key sama)
-  // Gunakan key unik berbasis timestamp
-  var key = 'absPhoto_' + Date.now();
+  // Simpan foto ke localStorage dengan key tetap
   try {
-    localStorage.setItem(key, compressed);
-    localStorage.setItem('absPhotoKey', key);
-    localStorage.setItem('absPhotoReady', '1');
+    localStorage.setItem('absFoto', photoData);
+    localStorage.setItem('absFotoStatus', 'ready');
   } catch(e) {
-    // localStorage penuh — kompres lebih kecil
-    var tiny = canvas.toDataURL('image/jpeg', 0.45);
-    try {
-      localStorage.setItem(key, tiny);
-      localStorage.setItem('absPhotoKey', key);
-      localStorage.setItem('absPhotoReady', '1');
-    } catch(e2) {}
+    // Foto terlalu besar — kompres lebih kecil
+    var c = document.getElementById('canvas');
+    var kecil = c.toDataURL('image/jpeg', 0.45);
+    localStorage.setItem('absFoto', kecil);
+    localStorage.setItem('absFotoStatus', 'ready');
   }
 
-  // Kembali ke Apps Script dengan parameter status
+  // Kembali ke Apps Script
   if (RETURN_URL) {
-    window.location.href = RETURN_URL + '&photoReady=1&photoKey=' + encodeURIComponent(key);
+    window.location.href = RETURN_URL;
   } else {
-    history.back();
+    // Fallback: coba history.back dua kali (keluar dari redirect chain)
+    history.go(-2);
   }
 }
 
 function goBack() {
   stopStream();
+  try { localStorage.setItem('absFotoStatus', 'cancelled'); } catch(e) {}
   if (RETURN_URL) {
-    window.location.href = RETURN_URL + '&photoCancelled=1';
+    window.location.href = RETURN_URL;
   } else {
-    history.back();
+    history.go(-2);
   }
 }
 
@@ -269,7 +224,6 @@ function showStatus(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 function hideStatus() { document.getElementById('statusBar').style.display = 'none'; }
-
 function showErr(msg) {
   hideStatus();
   document.getElementById('errMsg').textContent = msg;
