@@ -117,10 +117,17 @@ var stream = null;
 var facing = 'user';
 var photoData = null;
 
-// Ambil state dari sessionStorage (dikirim halaman utama)
+// Ambil state dari URL parameter (lebih reliable dari sessionStorage lintas domain)
 var state = {};
-try { state = JSON.parse(sessionStorage.getItem('absState') || '{}'); } catch(e) {}
+try {
+  var params = new URLSearchParams(window.location.search);
+  var stateParam = params.get('state');
+  if (stateParam) state = JSON.parse(decodeURIComponent(stateParam));
+} catch(e) {}
 if (state.title) document.getElementById('topTitle').textContent = state.title;
+
+// URL halaman utama Apps Script (untuk kirim balik foto)
+var RETURN_URL = state.returnUrl || '';
 
 // Langsung mulai kamera
 startCam();
@@ -210,25 +217,43 @@ function retake() {
 
 function useFoto() {
   if (!photoData) return;
-  // Simpan foto ke sessionStorage lalu kembali ke halaman utama
+
+  // Kompres foto agar muat di URL / localStorage
+  var canvas = document.getElementById('canvas');
+  var compressed = canvas.toDataURL('image/jpeg', 0.72);
+
+  // Simpan ke localStorage (bisa diakses dari domain manapun selama key sama)
+  // Gunakan key unik berbasis timestamp
+  var key = 'absPhoto_' + Date.now();
   try {
-    sessionStorage.setItem('absPhoto', photoData);
-    sessionStorage.setItem('absPhotoReady', '1');
+    localStorage.setItem(key, compressed);
+    localStorage.setItem('absPhotoKey', key);
+    localStorage.setItem('absPhotoReady', '1');
   } catch(e) {
-    // sessionStorage penuh — foto terlalu besar, kompres ulang
-    var c = document.getElementById('canvas');
-    var small = c.toDataURL('image/jpeg', 0.55);
-    sessionStorage.setItem('absPhoto', small);
-    sessionStorage.setItem('absPhotoReady', '1');
+    // localStorage penuh — kompres lebih kecil
+    var tiny = canvas.toDataURL('image/jpeg', 0.45);
+    try {
+      localStorage.setItem(key, tiny);
+      localStorage.setItem('absPhotoKey', key);
+      localStorage.setItem('absPhotoReady', '1');
+    } catch(e2) {}
   }
-  // Kembali ke halaman utama
-  history.back();
+
+  // Kembali ke Apps Script dengan parameter status
+  if (RETURN_URL) {
+    window.location.href = RETURN_URL + '&photoReady=1&photoKey=' + encodeURIComponent(key);
+  } else {
+    history.back();
+  }
 }
 
 function goBack() {
   stopStream();
-  sessionStorage.removeItem('absPhotoReady');
-  history.back();
+  if (RETURN_URL) {
+    window.location.href = RETURN_URL + '&photoCancelled=1';
+  } else {
+    history.back();
+  }
 }
 
 function retryCamera() { hideErr(); startCam(); }
