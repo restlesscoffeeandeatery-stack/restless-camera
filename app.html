@@ -377,10 +377,10 @@ canvas{display:none}
 // ═══════════════════════════════════════════════════════════════
 // KONFIGURASI — WAJIB DIISI
 // ═══════════════════════════════════════════════════════════════
-var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyM5wXGf0MeQCrt4ITArM5cF9NJv8EmKxjwox1J06foDK_8GJ_wpcWr1GHu4ycJ2XEb/exec'; // https://script.google.com/macros/s/.../exec
-var KANTOR_LAT = -7.797120;
-var KANTOR_LNG = 110.378116;
-var RADIUS_METER = 2000;
+var WEBAPP_URL = 'GANTI_DENGAN_URL_APPS_SCRIPT_EXEC'; // https://script.google.com/macros/s/.../exec
+var KANTOR_LAT = -7.7785;
+var KANTOR_LNG = 110.3831;
+var RADIUS_METER = 200;
 var SHIFTS = [
   { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'11:59' },
   { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'12:00', sampai:'12:59' },
@@ -928,13 +928,13 @@ function submitAbsen() {
     employeeId: state.employee.id,
     employeeName: state.employee.name,
     division: state.employee.division,
-    photo: state.photo,
+    photo: '',          // foto dikirim terpisah setelah absensi berhasil
     alasan: alasan,
     lat: state.gpsCoords.lat,
     lng: state.gpsCoords.lng
   };
 
-  // Kirim via POST ke Apps Script
+  // Kirim data absensi dulu (tanpa foto)
   fetch(WEBAPP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
@@ -944,12 +944,20 @@ function submitAbsen() {
   .then(function(res) {
     if (res.success) {
       showSuccessScreen(res);
+      // Upload foto terpisah via GET chunks (tidak blocking UI)
+      if (state.photo && state.photo.length > 100) {
+        var now = new Date();
+        var tgl = ('0'+now.getDate()).slice(-2)+'/'+('0'+(now.getMonth()+1)).slice(-2)+'/'+now.getFullYear();
+        var tipe = state.mode === 'checkin' ? 'masuk' : 'pulang';
+        var fname = tipe.toUpperCase()+'_'+state.employee.id+'_'+tgl.replace(/\//g,'-')+'.jpg';
+        var sid = 'foto_'+Date.now();
+        uploadFotoChunked(sid, fname, tgl, state.employee.id, tipe, state.photo);
+      }
     } else {
       showAlert('reasonAlert', res.message || 'Gagal menyimpan. Coba lagi.', 'error');
     }
   })
   .catch(function(err) {
-    // Fallback: coba GET dengan parameter (tanpa foto — upload foto terpisah)
     showAlert('reasonAlert', 'Koneksi gagal: ' + err.message + '\nCoba lagi.', 'error');
   })
   .finally(function() { hideLoading(); });
@@ -979,6 +987,47 @@ function backToMenu() {
     .then(function(att) { state.attendanceToday = att; renderChoiceScreen(); showScreen('s2'); })
     .catch(function() { showScreen('s2'); })
     .finally(function() { hideLoading(); });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UPLOAD FOTO — chunked via GET (bypass CORS & body size limit)
+// ═══════════════════════════════════════════════════════════════
+function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
+  // Chunk size 50KB — aman untuk URL parameter
+  var CHUNK = 50000;
+  var totalChunks = Math.ceil(photoBase64.length / CHUNK);
+
+  // Step 1: Register upload session
+  apiGet('registerFotoUpload', {
+    sessionId:  sessionId,
+    filename:   filename,
+    tanggal:    tanggal,
+    employeeId: employeeId,
+    tipe:       tipe
+  }).then(function() {
+    // Step 2: Upload chunks satu per satu
+    return uploadNextChunk(sessionId, photoBase64, 0, totalChunks, CHUNK);
+  }).catch(function(e) {
+    console.log('Upload foto gagal:', e);
+  });
+}
+
+function uploadNextChunk(sessionId, fullData, idx, total, chunkSize) {
+  var chunk = fullData.substring(idx * chunkSize, (idx + 1) * chunkSize);
+  return apiGet('saveFotoChunk', {
+    sessionId:   sessionId,
+    chunkIndex:  idx,
+    totalChunks: total,
+    chunkData:   chunk
+  }).then(function(res) {
+    if (res && res.done) {
+      console.log('Foto tersimpan: ' + res.url);
+    } else if (idx + 1 < total) {
+      return uploadNextChunk(sessionId, fullData, idx + 1, total, chunkSize);
+    }
+  }).catch(function(e) {
+    console.log('Chunk ' + idx + ' error:', e);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
