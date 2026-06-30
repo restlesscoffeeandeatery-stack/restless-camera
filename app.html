@@ -384,10 +384,10 @@ canvas{display:none}
 // ═══════════════════════════════════════════════════════════════
 // KONFIGURASI — WAJIB DIISI
 // ═══════════════════════════════════════════════════════════════
-var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby-ASqt-CeRtV6qdyxjRBOs1fp-F9LV3PEuHySAX7XyGKhnoG6-PuKbl_TVz8knbH-B/exec'; // https://script.google.com/macros/s/.../exec
+var WEBAPP_URL = 'GANTI_DENGAN_URL_APPS_SCRIPT_EXEC'; // https://script.google.com/macros/s/.../exec
 var KANTOR_LAT = -7.797120;
 var KANTOR_LNG = 110.378116;
-var RADIUS_METER = 100;
+var RADIUS_METER = 2000;
 var SHIFTS = [
   { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'09:00' },
   { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'10:00', sampai:'12:59' },
@@ -467,7 +467,7 @@ function apiPost(data) {
   return fetch(WEBAPP_URL, {
     method: 'POST',
     mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(data)
   });
 }
@@ -851,7 +851,7 @@ function snap() {
   var ctx = c.getContext('2d');
   if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
   ctx.drawImage(v,0,0);
-  state.photo = c.toDataURL('image/jpeg', 0.5);
+  state.photo = c.toDataURL('image/jpeg', 0.82);
   stopStream();
   document.getElementById('previewImg').src = state.photo;
   document.getElementById('previewWrap').style.display = 'block';
@@ -944,7 +944,6 @@ function submitAbsen() {
   // Kirim data absensi dulu (tanpa foto)
   fetch(WEBAPP_URL, {
     method: 'POST',
-    mode: 'no-cors'
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
   })
@@ -1016,52 +1015,58 @@ function dbg(msg) {
   }
 }
 
-function uploadFotoChunked(sessionId,
-  filename, tanggal, employeeId,
-  tipe, photoBase64) {
-    var CHUNK_SIZE = 18000; //
-  Kurangi sedikit biar lebih aman
-    var totalChunks =
-  Math.ceil(photoBase64.length /
-  CHUNK_SIZE);
-
-    function uploadChunk(idx) {
-      if (idx >= totalChunks) return;
-
-      var chunk =
-  photoBase64.substring(idx *
-  CHUNK_SIZE, (idx + 1) *
-  CHUNK_SIZE);
-
-      // Gunakan GET dengan parameter
-   untuk hindari CORS
-      var url = WEBAPP_URL +
-  '?fn=saveFotoChunk&sessionId=' +
-  sessionId + '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + '&chunkData=' + encodeURIComponent(chunk) + '&filename=' +
-  encodeURIComponent(filename) +
-                 '&tanggal=' + tanggal + '&employeeId=' +
-  employeeId + '&tipe=' + tipe;
-
-      // Timeout 30 detik
-      var controller = new AbortController();
-      var timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      fetch(url, { signal:
-  controller.signal })
-        .then(function(r) { return
-  r.json(); })
-        .then(function(res) {
-          if (res && res.ok &&
-  !res.done) uploadChunk(idx + 1);
-        })
-        .catch(function(e) {
-          if (e.name !==
-  'AbortError') console.log('Chunk
-  error:', e.message);
-        });
+function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
+  dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
+  
+  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
+  var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
+  
+  dbg('[FOTO] Total chunks: ' + totalChunks);
+  
+  // Upload chunk satu per satu secara berurutan
+  function uploadChunk(idx) {
+    if (idx >= totalChunks) {
+      dbg('[FOTO] Semua chunk terkirim!');
+      return;
     }
-    uploadChunk(0);
+    
+    var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
+    
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        fn:          'uploadChunk',
+        sessionId:   sessionId,
+        chunkIdx:    idx,
+        totalChunks: totalChunks,
+        chunk:       chunk,
+        filename:    filename,
+        tanggal:     tanggal,
+        employeeId:  employeeId,
+        tipe:        tipe
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
+      if (res && res.done) {
+        dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
+      } else if (res && res.ok && !res.done) {
+        // Lanjut chunk berikutnya
+        uploadChunk(idx + 1);
+      } else {
+        dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
+      }
+    })
+    .catch(function(e) {
+      dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
+    });
   }
+  
+  // Mulai dari chunk 0
+  uploadChunk(0);
+}
 // ═══════════════════════════════════════════════════════════════
 // PWA
 // ═══════════════════════════════════════════════════════════════
