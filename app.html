@@ -384,7 +384,7 @@ canvas{display:none}
 // ═══════════════════════════════════════════════════════════════
 // KONFIGURASI — WAJIB DIISI
 // ═══════════════════════════════════════════════════════════════
-var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyM5wXGf0MeQCrt4ITArM5cF9NJv8EmKxjwox1J06foDK_8GJ_wpcWr1GHu4ycJ2XEb/exec'; // https://script.google.com/macros/s/.../exec
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwxX_i6mMsv9zrgubCmQaChf_97pjco1yhBIg8uSSs9XldVUnVChQ-isKd57OZawRAT/exec'; // https://script.google.com/macros/s/.../exec
 var KANTOR_LAT = -7.797120;
 var KANTOR_LNG = 110.378116;
 var RADIUS_METER = 2000;
@@ -997,10 +997,11 @@ function backToMenu() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// UPLOAD FOTO LANGSUNG KE GOOGLE DRIVE API
-// Flow: ambil token dari Apps Script → upload foto ke Drive REST API
-//       → notify Apps Script untuk update URL di spreadsheet
+// UPLOAD FOTO VIA POST CHUNKS KE APPS SCRIPT
+// Foto dipotong 20KB per chunk → dikirim via POST → Apps Script
+// gabungkan → simpan ke Drive → update spreadsheet
 // ═══════════════════════════════════════════════════════════════
+
 function dbg(msg) {
   console.log(msg);
   var panel = document.getElementById('debugPanel');
@@ -1017,96 +1018,55 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  // Step 1: Ambil OAuth token + folder ID dari Apps Script
-  apiGet('getDriveUploadToken', {
-    filename:   filename,
-    tanggal:    tanggal,
-    employeeId: employeeId,
-    tipe:       tipe
-  }).then(function(res) {
-    dbg('[FOTO] getDriveUploadToken:', JSON.stringify(res).substring(0, 100));
-    if (!res || !res.ok) {
-      dbg('[FOTO] Gagal dapat token:', res ? res.msg : 'no response');
+  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
+  var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
+  
+  dbg('[FOTO] Total chunks: ' + totalChunks);
+  
+  // Upload chunk satu per satu secara berurutan
+  function uploadChunk(idx) {
+    if (idx >= totalChunks) {
+      dbg('[FOTO] Semua chunk terkirim!');
       return;
     }
-    dbg('[FOTO] Token OK, folderId=' + res.folderId);
     
-    // Step 2: Upload foto ke Drive menggunakan token
-    return uploadToDriveApi(res.token, res.folderId, filename, photoBase64)
-      .then(function(fileId) {
-        dbg('[FOTO] uploadToDriveApi result fileId=' + fileId);
-        if (!fileId) { dbg('[FOTO] Upload Drive gagal - no fileId'); return; }
-        
-        // Step 3: Notify Apps Script untuk set sharing + update spreadsheet
-        return apiGet('updateFotoUrlAfterUpload', {
-          fileId:     fileId,
-          tanggal:    tanggal,
-          employeeId: employeeId,
-          tipe:       tipe
-        }).then(function(upd) {
-          dbg('[FOTO] updateFotoUrl:', JSON.stringify(upd));
-          if (upd && upd.ok) {
-            dbg('[FOTO] Foto berhasil:', upd.url);
-          } else {
-            dbg('[FOTO] updateFotoUrl gagal:', upd ? upd.msg : '');
-          }
-        });
-      });
-  }).catch(function(e) {
-    dbg('[FOTO] uploadFotoChunked ERROR:', e.message || e);
-  });
-}
-
-function uploadToDriveApi(token, folderId, filename, photoBase64) {
-  dbg('[FOTO] uploadToDriveApi start, token length=' + (token ? token.length : 0));
-  
-  try {
-    var base64Clean = photoBase64.replace(/^data:image\/[^;]+;base64,/, '');
-    var byteChars   = atob(base64Clean);
-    var byteArr     = new Uint8Array(byteChars.length);
-    for (var i = 0; i < byteChars.length; i++) {
-      byteArr[i] = byteChars.charCodeAt(i);
-    }
-    var blob = new Blob([byteArr], { type: 'image/jpeg' });
-    dbg('[FOTO] Blob size=' + blob.size);
-
-    var metadata = {
-      name:    filename,
-      parents: [folderId],
-      mimeType: 'image/jpeg'
-    };
-
-    var formData = new FormData();
-    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    formData.append('file', blob);
-
-    return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
+    
+    fetch(WEBAPP_URL, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-      body: formData
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        fn:          'uploadChunk',
+        sessionId:   sessionId,
+        chunkIdx:    idx,
+        totalChunks: totalChunks,
+        chunk:       chunk,
+        filename:    filename,
+        tanggal:     tanggal,
+        employeeId:  employeeId,
+        tipe:        tipe
+      })
     })
-    .then(function(r) {
-      dbg('[FOTO] Drive API response status=' + r.status);
-      return r.json();
-    })
-    .then(function(data) {
-      dbg('[FOTO] Drive API data=' + JSON.stringify(data).substring(0, 200));
-      if (data && data.id) return data.id;
-      if (data && data.error) dbg('[FOTO] Drive error:', data.error.message);
-      return null;
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
+      if (res && res.done) {
+        dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
+      } else if (res && res.ok && !res.done) {
+        // Lanjut chunk berikutnya
+        uploadChunk(idx + 1);
+      } else {
+        dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
+      }
     })
     .catch(function(e) {
-      dbg('[FOTO] fetch Drive API error:', e.message);
-      return null;
+      dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
     });
-  } catch(e) {
-    dbg('[FOTO] uploadToDriveApi exception:', e.message);
-    return Promise.resolve(null);
   }
+  
+  // Mulai dari chunk 0
+  uploadChunk(0);
 }
-
-
-
 // ═══════════════════════════════════════════════════════════════
 // PWA
 // ═══════════════════════════════════════════════════════════════
