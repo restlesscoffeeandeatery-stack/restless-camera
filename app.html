@@ -1034,6 +1034,7 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     
     fetch(WEBAPP_URL, {
       method: 'POST',
+      redirect; 'follow',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         fn:          'uploadChunk',
