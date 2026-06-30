@@ -466,8 +466,8 @@ function apiGet(fn, params) {
 function apiPost(data) {
   return fetch(WEBAPP_URL, {
     method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
 }
