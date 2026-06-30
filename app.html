@@ -1018,12 +1018,12 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
+  // Ukuran diperkecil ke 15KB agar transmisi POST per chunk jauh lebih ringan dan stabil
+  var CHUNK_SIZE = 15000; 
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
   
   dbg('[FOTO] Total chunks: ' + totalChunks);
   
-  // Upload chunk satu per satu secara berurutan
   function uploadChunk(idx) {
     if (idx >= totalChunks) {
       dbg('[FOTO] Semua chunk terkirim!');
@@ -1032,30 +1032,40 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     
     var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
   
-    // Gunakan GET dengan parameter untuk hindari CORS
-    var url = WEBAPP_URL + '?fn=saveFotoChunk&sessionId=' + sessionId + 
-               '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + 
-               '&chunkData=' + encodeURIComponent(chunk) +
-               '&filename=' + encodeURIComponent(filename) + 
-               '&tanggal=' + tanggal + '&employeeId=' + employeeId + '&tipe=' + tipe;
+    // Bungkus data ke dalam objek JSON payload
+    var payload = {
+      fn: 'saveFotoChunk',
+      sessionId: sessionId,
+      chunkIndex: idx,
+      totalChunks: totalChunks,
+      chunkData: chunk, // Dikirim mentah di dalam body, tidak perlu encodeURIComponent di URL
+      filename: filename,
+      tanggal: tanggal,
+      employeeId: employeeId,
+      tipe: tipe
+    };
     
-    // Timeout 30 detik (Diubah ke fungsi anonim standar ES5)
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { 
       controller.abort(); 
-    }, 30000);
+    }, 30000); // Batas toleransi interupsi jaringan 30 detik
     
-    fetch(url, { signal: controller.signal })
+    // Alihkan dari GET ke POST murni via body payload
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    })
     .then(function(r) { return r.json(); })
     .then(function(res) {
-      // Bersihkan timeout jika fetch berhasil selesai sebelum 30 detik
       clearTimeout(timeoutId);
       
       dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
       if (res && res.done) {
         dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
       } else if (res && res.ok && !res.done) {
-        // Lanjut chunk berikutnya
+        // Eksekusi berantai ke chunk berikutnya jika sukses
         uploadChunk(idx + 1);
       } else {
         dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
@@ -1064,10 +1074,16 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     .catch(function(e) {
       clearTimeout(timeoutId);
       dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
+      
+      // Mekanisme Auto-Retry: Coba kembali chunk yang gagal setelah delay 3 detik jika terjadi gangguan sesaat
+      dbg('[FOTO] Mencoba ulang chunk ' + idx + ' dalam 3 detik...');
+      setTimeout(function() {
+        uploadChunk(idx);
+      }, 30000 / 10); 
     });
   }
   
-  // Mulai dari chunk 0
+  // Inisiasi pengiriman dari chunk awal
   uploadChunk(0);
 }
 // ═══════════════════════════════════════════════════════════════
