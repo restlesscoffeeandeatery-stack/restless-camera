@@ -466,7 +466,7 @@ function apiGet(fn, params) {
 function apiPost(data) {
   return fetch(WEBAPP_URL, {
     method: 'POST',
-    redirect: 'follow',
+    mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
@@ -1018,7 +1018,7 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
+  var CHUNK_SIZE = 18000; // 18KB per chunk — aman untuk POST
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
   
   dbg('[FOTO] Total chunks: ' + totalChunks);
@@ -1032,41 +1032,28 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     
     var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
     
-    fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        fn:          'uploadChunk',
-        sessionId:   sessionId,
-        chunkIdx:    idx,
-        totalChunks: totalChunks,
-        chunk:       chunk,
-        filename:    filename,
-        tanggal:     tanggal,
-        employeeId:  employeeId,
-        tipe:        tipe
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
-      if (res && res.done) {
-        dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
-      } else if (res && res.ok && !res.done) {
-        // Lanjut chunk berikutnya
-        uploadChunk(idx + 1);
-      } else {
-        dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
-      }
-    })
-    .catch(function(e) {
-      dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
-    });
+    // Gunakan GET dengan parameter untuk hindari CORS
+    var url = WEBAPP_URL + '?fn=saveFotoChunk&sessionId=' + sessionId +
+                 '&chunkIndex=' + idx + '&totalChunks=' + totalChunks +
+                 '&chunkData=' + encodeURIComponent(chunk) +
+                 '&filename=' + encodeURIComponent(filename) +
+                 '&tanggal=' + tanggal + '&employeeId=' + employeeId + '&tipe=' + tipe;
+
+      // Timeout 30 detik
+      var controller = new AbortController();
+      var timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      fetch(url, { signal: controller.signal })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          if (res && res.ok && !res.done) uploadChunk(idx + 1);
+        })
+        .catch(function(e) {
+          if (e.name !== 'AbortError') console.log('Chunk error:', e.message);
+        });
+    }
+    uploadChunk(0);
   }
-  
-  // Mulai dari chunk 0
-  uploadChunk(0);
-}
 // ═══════════════════════════════════════════════════════════════
 // PWA
 // ═══════════════════════════════════════════════════════════════
