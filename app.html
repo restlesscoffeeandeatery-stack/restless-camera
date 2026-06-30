@@ -1031,8 +1031,8 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     }
     
     var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
-
-    // Gunakan GET dengan parameter untuk hindari CORS
+  
+  // Gunakan GET dengan parameter untuk hindari CORS
     var url = WEBAPP_URL + '?fn=saveFotoChunk&sessionId=' + sessionId + 
                '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + 
                '&chunkData=' + encodeURIComponent(chunk) +
