@@ -923,6 +923,15 @@ function goToReason() {
 // ═══════════════════════════════════════════════════════════════
 // SUBMIT ABSENSI
 // ═══════════════════════════════════════════════════════════════
+// Perbarui fungsi apiPost agar tidak menggunakan mode: 'no-cors' yang merusak respon JSON
+function apiPost(data) {
+  return fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(data)
+  });
+}
+
 function submitAbsen() {
   var alasan = document.getElementById('reasonText').value.trim();
   if (!state.photo) { showAlert('reasonAlert', 'Foto tidak ada. Kembali dan ambil foto.', 'error'); return; }
@@ -930,42 +939,46 @@ function submitAbsen() {
 
   loading(state.mode === 'checkin' ? 'Menyimpan absen masuk...' : 'Menyimpan absen pulang...');
 
+  // Bungkus semua parameter ke dalam properti 'fn' yang jelas agar doPost backend membacanya dengan tepat
   var payload = {
     fn: state.mode === 'checkin' ? 'checkIn' : 'checkOut',
     employeeId: state.employee.id,
     employeeName: state.employee.name,
     division: state.employee.division,
-    photo: '',          // foto dikirim terpisah setelah absensi berhasil
+    photo: '',          // foto tetap dikirim terpisah setelah absensi berhasil
     alasan: alasan,
     lat: state.gpsCoords.lat,
     lng: state.gpsCoords.lng
   };
 
-  // Kirim data absensi dulu (tanpa foto)
+  // Kirim data absensi menggunakan format teks mentah (Text/Plain) agar lolos preflight CORS browser
   fetch(WEBAPP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
   })
-  .then(function(r) { return r.json(); })
+  .then(function(r) { 
+    if (!r.ok) throw new Error('HTTP error, status: ' + r.status);
+    return r.json(); 
+  })
   .then(function(res) {
-    if (res.success) {
+    if (res && res.success) {
       showSuccessScreen(res);
-      // Upload foto terpisah via GET chunks (tidak blocking UI)
+      // Upload foto terpisah via POST chunks bertahap (tidak memblokir UI utama)
       if (state.photo && state.photo.length > 100) {
         var now = new Date();
-        var tgl = ('0'+now.getDate()).slice(-2)+'/'+('0'+(now.getMonth()+1)).slice(-2)+'/'+now.getFullYear();
+        var tgl = ('0'+now.getDate()).slice(-2)+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+now.getFullYear();
         var tipe = state.mode === 'checkin' ? 'masuk' : 'pulang';
-        var fname = tipe.toUpperCase()+'_'+state.employee.id+'_'+tgl.replace(/\//g,'-')+'.jpg';
+        var fname = tipe.toUpperCase()+'_'+state.employee.id+'_'+tgl+'.jpg';
         var sid = 'foto_'+Date.now();
         uploadFotoChunked(sid, fname, tgl, state.employee.id, tipe, state.photo);
       }
     } else {
-      showAlert('reasonAlert', res.message || 'Gagal menyimpan. Coba lagi.', 'error');
+      showAlert('reasonAlert', (res && res.message) || 'Gagal menyimpan. Periksa konfigurasi kolom Google Sheets Anda.', 'error');
     }
   })
   .catch(function(err) {
-    showAlert('reasonAlert', 'Koneksi gagal: ' + err.message + '\nCoba lagi.', 'error');
+    showAlert('reasonAlert', 'Koneksi gagal atau Server Error: ' + err.message + '\nPastikan Apps Script sudah di-Deploy ulang sebagai versi baru.', 'error');
   })
   .finally(function() { hideLoading(); });
 }
@@ -1018,8 +1031,7 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  // Ukuran diperkecil ke 15KB agar transmisi POST per chunk jauh lebih ringan dan stabil
-  var CHUNK_SIZE = 15000; 
+  var CHUNK_SIZE = 15000; // 15KB per chunk agar transmisi ringan di jaringan seluler HP
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
   
   dbg('[FOTO] Total chunks: ' + totalChunks);
@@ -1032,13 +1044,13 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     
     var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
   
-    // Bungkus data ke dalam objek JSON payload
+    // Amankan parameter di dalam body payload JSON
     var payload = {
       fn: 'saveFotoChunk',
       sessionId: sessionId,
       chunkIndex: idx,
       totalChunks: totalChunks,
-      chunkData: chunk, // Dikirim mentah di dalam body, tidak perlu encodeURIComponent di URL
+      chunkData: chunk,
       filename: filename,
       tanggal: tanggal,
       employeeId: employeeId,
@@ -1046,11 +1058,8 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     };
     
     var controller = new AbortController();
-    var timeoutId = setTimeout(function() { 
-      controller.abort(); 
-    }, 30000); // Batas toleransi interupsi jaringan 30 detik
+    var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
     
-    // Alihkan dari GET ke POST murni via body payload
     fetch(WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -1060,13 +1069,11 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     .then(function(r) { return r.json(); })
     .then(function(res) {
       clearTimeout(timeoutId);
-      
       dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
       if (res && res.done) {
         dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
       } else if (res && res.ok && !res.done) {
-        // Eksekusi berantai ke chunk berikutnya jika sukses
-        uploadChunk(idx + 1);
+        uploadChunk(idx + 1); // Lanjut chunk berikutnya
       } else {
         dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
       }
@@ -1074,16 +1081,11 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     .catch(function(e) {
       clearTimeout(timeoutId);
       dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
-      
-      // Mekanisme Auto-Retry: Coba kembali chunk yang gagal setelah delay 3 detik jika terjadi gangguan sesaat
       dbg('[FOTO] Mencoba ulang chunk ' + idx + ' dalam 3 detik...');
-      setTimeout(function() {
-        uploadChunk(idx);
-      }, 30000 / 10); 
+      setTimeout(function() { uploadChunk(idx); }, 3000); // Auto-retry otomatis jika jaringan putus
     });
   }
   
-  // Inisiasi pengiriman dari chunk awal
   uploadChunk(0);
 }
 // ═══════════════════════════════════════════════════════════════
