@@ -1018,7 +1018,7 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  var CHUNK_SIZE = 5000; // 20KB per chunk — aman untuk POST
+  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
   
   dbg('[FOTO] Total chunks: ' + totalChunks);
