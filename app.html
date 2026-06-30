@@ -1016,8 +1016,7 @@ function dbg(msg) {
   }
 }
 
-function 
-  uploadFotoChunked(sessionId,
+function uploadFotoChunked(sessionId,
   filename, tanggal, employeeId,
   tipe, photoBase64) {
     var CHUNK_SIZE = 18000; //
@@ -1038,22 +1037,14 @@ function
    untuk hindari CORS
       var url = WEBAPP_URL +
   '?fn=saveFotoChunk&sessionId=' +
-  sessionId +
-                 '&chunkIndex=' + idx
-   + '&totalChunks=' + totalChunks +
-                 '&chunkData=' +
-  encodeURIComponent(chunk) +
-                 '&filename=' +
+  sessionId + '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + '&chunkData=' + encodeURIComponent(chunk) + '&filename=' +
   encodeURIComponent(filename) +
-                 '&tanggal=' +
-  tanggal + '&employeeId=' +
+                 '&tanggal=' + tanggal + '&employeeId=' +
   employeeId + '&tipe=' + tipe;
 
       // Timeout 30 detik
-      var controller = new
-  AbortController();
-      var timeoutId = setTimeout(()
-  => controller.abort(), 30000);
+      var controller = new AbortController();
+      var timeoutId = setTimeout(() => controller.abort(), 30000);
 
       fetch(url, { signal:
   controller.signal })
