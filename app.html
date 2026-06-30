@@ -1017,54 +1017,37 @@ function dbg(msg) {
 
 function uploadFotoChunked(sessionId, filename, tanggal,   
   employeeId, tipe, photoBase64) {                           
-    var CHUNK_SIZE = 18000;                                  
+    var CHUNK_SIZE = 15000;                                  
     var totalChunks = Math.ceil(photoBase64.length /         
   CHUNK_SIZE);                                               
                                                              
-    // Coba upload via iframe untuk hindari CORS             
-    function uploadChunk(idx) {
-      if (idx >= totalChunks) return;                        
+    for (var i = 0; i < totalChunks; i++) {                  
+      (function(idx) {
+        setTimeout(function() {                              
+          var chunk = photoBase64.substring(idx * CHUNK_SIZE,
+   (idx + 1) * CHUNK_SIZE);                                  
                                                              
-      var chunk = photoBase64.substring(idx * CHUNK_SIZE,    
-  (idx + 1) * CHUNK_SIZE);                                   
+          var params = new URLSearchParams({                 
+            fn: 'saveFotoChunk',
+            sessionId: sessionId,                            
+            chunkIndex: idx,                                 
+            totalChunks: totalChunks,                        
+            chunkData: chunk,                                
+            filename: filename,                              
+            tanggal: tanggal,                                
+            employeeId: employeeId,                          
+            tipe: tipe                                       
+          });                                                
                                                              
-      var form = document.createElement('form');             
-      form.method = 'POST';
-      form.action = WEBAPP_URL;                              
-      form.target = 'f_' + idx;                              
-                                                             
-      var data = {                                           
-        fn: 'saveFotoChunk',                                 
-        sessionId: sessionId,                                
-        chunkIndex: idx,                                     
-        totalChunks: totalChunks,                            
-        chunkData: chunk,                                    
-        filename: filename,                                  
-        tanggal: tanggal,                                    
-        employeeId: employeeId,                              
-        tipe: tipe                                           
-      };                                                     
-                                                             
-      for (var k in data) {                                  
-        var input = document.createElement('input');         
-        input.type = 'hidden';                               
-        input.name = k;                                      
-        input.value = typeof data[k] === 'object' ?          
-  JSON.stringify(data[k]) : data[k];                         
-        form.appendChild(input);                             
-      }                                                      
-                                                             
-      var iframe = document.createElement('iframe');         
-      iframe.name = 'f_' + idx;                              
-      iframe.style.display = 'none';                         
-      document.body.appendChild(iframe);                     
-      document.body.appendChild(form);                       
-                                                             
-      form.submit();                                         
-      setTimeout(() => uploadChunk(idx + 1), 1000);          
+          fetch(WEBAPP_URL + '?' + params.toString())        
+            .then(r => r.json())                             
+            .then(res => console.log('Chunk', idx, 'done:',  
+  res.done))                                                 
+            .catch(e => console.log('Chunk', idx, 'error:',  
+  e.message));                                               
+        }, idx * 500);
+      })(i);                                                 
     }                                                        
-                                                             
-    uploadChunk(0);                                          
   }
 // ═══════════════════════════════════════════════════════════════
 // PWA
