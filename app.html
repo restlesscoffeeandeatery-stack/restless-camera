@@ -851,7 +851,7 @@ function snap() {
   var ctx = c.getContext('2d');
   if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
   ctx.drawImage(v,0,0);
-  state.photo = c.toDataURL('image/jpeg', 0.82);
+  state.photo = c.toDataURL('image/jpeg', 0.5);
   stopStream();
   document.getElementById('previewImg').src = state.photo;
   document.getElementById('previewWrap').style.display = 'block';
