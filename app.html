@@ -1032,20 +1032,25 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     
     var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
   
-  // Gunakan GET dengan parameter untuk hindari CORS
+    // Gunakan GET dengan parameter untuk hindari CORS
     var url = WEBAPP_URL + '?fn=saveFotoChunk&sessionId=' + sessionId + 
                '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + 
                '&chunkData=' + encodeURIComponent(chunk) +
                '&filename=' + encodeURIComponent(filename) + 
                '&tanggal=' + tanggal + '&employeeId=' + employeeId + '&tipe=' + tipe;
     
-    // Timeout 30 detik
+    // Timeout 30 detik (Diubah ke fungsi anonim standar ES5)
     var controller = new AbortController();
-    var timeoutId = setTimeout(() => controller.abort(), 30000);
+    var timeoutId = setTimeout(function() { 
+      controller.abort(); 
+    }, 30000);
     
     fetch(url, { signal: controller.signal })
     .then(function(r) { return r.json(); })
     .then(function(res) {
+      // Bersihkan timeout jika fetch berhasil selesai sebelum 30 detik
+      clearTimeout(timeoutId);
+      
       dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
       if (res && res.done) {
         dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
@@ -1057,6 +1062,7 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
       }
     })
     .catch(function(e) {
+      clearTimeout(timeoutId);
       dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
     });
   }
