@@ -1043,7 +1043,7 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
     var controller = new AbortController();
     var timeoutId = setTimeout(() => controller.abort(), 30000);
     
-    fetch(url, { signal; controller.signal })
+    fetch(url, { signal: controller.signal })
     .then(function(r) { return r.json(); })
     .then(function(res) {
       dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
