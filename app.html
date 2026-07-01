@@ -477,6 +477,7 @@ function apiPost(data) {
 // ═══════════════════════════════════════════════════════════════
 window.addEventListener('load', function() {
   registerSW();
+  checkAndResumePendingUpload();   // ← tambahkan baris ini
   setTimeout(function() {
     document.getElementById('splash').classList.add('hide');
     setTimeout(function() { document.getElementById('splash').style.display = 'none'; }, 500);
@@ -1002,6 +1003,14 @@ function backToMenu() {
 // gabungkan → simpan ke Drive → update spreadsheet
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// UPLOAD FOTO VIA POST CHUNKS KE APPS SCRIPT
+// Chunk lebih besar (50KB) + auto-resume kalau terputus
+// ═══════════════════════════════════════════════════════════════
+
+var CHUNK_SIZE = 50000; // 50KB per chunk
+var RESUME_KEY = 'restless_pending_foto';
+
 function dbg(msg) {
   console.log(msg);
   var panel = document.getElementById('debugPanel');
@@ -1015,33 +1024,45 @@ function dbg(msg) {
   }
 }
 
+function saveResumeState(state) {
+  try { localStorage.setItem(RESUME_KEY, JSON.stringify(state)); } catch(e) {}
+}
+function clearResumeState() {
+  try { localStorage.removeItem(RESUME_KEY); } catch(e) {}
+}
+function loadResumeState() {
+  try {
+    var raw = localStorage.getItem(RESUME_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
-  dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
-  
-  var CHUNK_SIZE = 50000; // 50KB per chunk — aman untuk POST
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
-  
-  dbg('[FOTO] Total chunks: ' + totalChunks);
-  
-  // Upload chunk satu per satu secara berurutan
-  function uploadChunk(idx) {
+  dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length + ' chunks=' + totalChunks);
+
+  saveResumeState({
+    sessionId: sessionId, filename: filename, tanggal: tanggal,
+    employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
+    totalChunks: totalChunks, nextChunk: 0
+  });
+
+  uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, 0);
+}
+
+function uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx, retryCount) {
+  retryCount = retryCount || 0;
+
   if (idx >= totalChunks) {
     dbg('[FOTO] Semua chunk terkirim!');
+    clearResumeState();
     return;
   }
 
   var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
-
   var payload = {
-    fn: 'saveFotoChunk',
-    sessionId: sessionId,
-    chunkIndex: idx,
-    totalChunks: totalChunks,
-    chunkData: chunk,
-    filename: filename,
-    tanggal: tanggal,
-    employeeId: employeeId,
-    tipe: tipe
+    fn: 'saveFotoChunk', sessionId: sessionId, chunkIndex: idx, totalChunks: totalChunks,
+    chunkData: chunk, filename: filename, tanggal: tanggal, employeeId: employeeId, tipe: tipe
   };
 
   var controller = new AbortController();
@@ -1057,22 +1078,50 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
   .then(function(res) {
     clearTimeout(timeoutId);
     dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
+
     if (res && res.done) {
       dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
+      clearResumeState();
     } else if (res && res.ok && !res.done) {
-      uploadChunk(idx + 1);
+      saveResumeState({
+        sessionId: sessionId, filename: filename, tanggal: tanggal,
+        employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
+        totalChunks: totalChunks, nextChunk: idx + 1
+      });
+      uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx + 1, 0);
     } else {
       dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
+      retryOrGiveUp(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx, retryCount);
     }
   })
   .catch(function(e) {
     clearTimeout(timeoutId);
     dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
+    retryOrGiveUp(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx, retryCount);
   });
 }
-  
-  // Mulai dari chunk 0
-  uploadChunk(0);
+
+function retryOrGiveUp(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx, retryCount) {
+  if (retryCount < 3) {
+    dbg('[FOTO] Retry chunk ' + idx + ' (percobaan ke-' + (retryCount + 2) + ')');
+    setTimeout(function() {
+      uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx, retryCount + 1);
+    }, 2000);
+  } else {
+    dbg('[FOTO] ❌ Chunk ' + idx + ' gagal setelah 3x percobaan. Akan dicoba lagi saat app dibuka ulang.');
+    // State resume sudah tersimpan di localStorage — akan auto-resume saat load berikutnya
+  }
+}
+
+// ── AUTO-RESUME saat app dibuka lagi ──────────────────────────
+function checkAndResumePendingUpload() {
+  var pending = loadResumeState();
+  if (!pending) return;
+  dbg('[FOTO] Ditemukan upload tertunda: ' + pending.filename + ', lanjut dari chunk ' + pending.nextChunk);
+  uploadChunk(
+    pending.sessionId, pending.filename, pending.tanggal, pending.employeeId,
+    pending.tipe, pending.photoBase64, pending.totalChunks, pending.nextChunk, 0
+  );
 }
 // ═══════════════════════════════════════════════════════════════
 // PWA
