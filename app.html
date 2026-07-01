@@ -1025,41 +1025,51 @@ function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photo
   
   // Upload chunk satu per satu secara berurutan
   function uploadChunk(idx) {
-    if (idx >= totalChunks) {
-      dbg('[FOTO] Semua chunk terkirim!');
-      return;
-    }
-    
-    var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
-  
-  // Gunakan GET dengan parameter untuk hindari CORS
-    var url = WEBAPP_URL + '?fn=saveFotoChunk&sessionId=' + sessionId + 
-               '&chunkIndex=' + idx + '&totalChunks=' + totalChunks + 
-               '&chunkData=' + encodeURIComponent(chunk) +
-               '&filename=' + encodeURIComponent(filename) + 
-               '&tanggal=' + tanggal + '&employeeId=' + employeeId + '&tipe=' + tipe;
-    
-    // Timeout 30 detik
-    var controller = new AbortController();
-    var timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    fetch(url, { signal: controller.signal })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
-      if (res && res.done) {
-        dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
-      } else if (res && res.ok && !res.done) {
-        // Lanjut chunk berikutnya
-        uploadChunk(idx + 1);
-      } else {
-        dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
-      }
-    })
-    .catch(function(e) {
-      dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
-    });
+  if (idx >= totalChunks) {
+    dbg('[FOTO] Semua chunk terkirim!');
+    return;
   }
+
+  var chunk = photoBase64.substring(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
+
+  var payload = {
+    fn: 'saveFotoChunk',
+    sessionId: sessionId,
+    chunkIndex: idx,
+    totalChunks: totalChunks,
+    chunkData: chunk,
+    filename: filename,
+    tanggal: tanggal,
+    employeeId: employeeId,
+    tipe: tipe
+  };
+
+  var controller = new AbortController();
+  var timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload),
+    signal: controller.signal
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    clearTimeout(timeoutId);
+    dbg('[FOTO] Chunk ' + idx + '/' + (totalChunks-1) + ': ' + JSON.stringify(res).substring(0,80));
+    if (res && res.done) {
+      dbg('[FOTO] ✅ Foto tersimpan: ' + res.url);
+    } else if (res && res.ok && !res.done) {
+      uploadChunk(idx + 1);
+    } else {
+      dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
+    }
+  })
+  .catch(function(e) {
+    clearTimeout(timeoutId);
+    dbg('[FOTO] ❌ Fetch error chunk ' + idx + ': ' + e.message);
+  });
+}
   
   // Mulai dari chunk 0
   uploadChunk(0);
