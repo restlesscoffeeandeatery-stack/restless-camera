@@ -851,7 +851,7 @@ function snap() {
   var ctx = c.getContext('2d');
   if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
   ctx.drawImage(v,0,0);
-  state.photo = c.toDataURL('image/jpeg', 0.5);
+  state.photo = c.toDataURL('image/jpeg', 0.82);
   stopStream();
   document.getElementById('previewImg').src = state.photo;
   document.getElementById('previewWrap').style.display = 'block';
@@ -1018,7 +1018,7 @@ function dbg(msg) {
 function uploadFotoChunked(sessionId, filename, tanggal, employeeId, tipe, photoBase64) {
   dbg('[FOTO] Mulai upload: ' + filename + ' size=' + photoBase64.length);
   
-  var CHUNK_SIZE = 20000; // 20KB per chunk — aman untuk POST
+  var CHUNK_SIZE = 50000; // 50KB per chunk — aman untuk POST
   var totalChunks = Math.ceil(photoBase64.length / CHUNK_SIZE);
   
   dbg('[FOTO] Total chunks: ' + totalChunks);
