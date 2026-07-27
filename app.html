@@ -135,6 +135,8 @@ textarea{resize:none;min-height:80px;font-size:14px}
 .sitem{background:var(--surface2);border-radius:10px;padding:11px;border:1px solid var(--border)}
 .sitem .slbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .sitem .sval{font-size:13px;font-weight:600}
+.sval-time{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:600;
+  letter-spacing:.3px;color:#F2C98F}
 
 /* ── SHIFT INFO ── */
 .shift-box{background:var(--surface2);border:1px solid var(--border);
@@ -566,7 +568,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
 // ═══════════════════════════════════════════════════════════════
 // KONFIGURASI — WAJIB DIISI
 // ═══════════════════════════════════════════════════════════════
-var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwq3k3ODVOt9b3KiOrsE_wFwFKybsUf0TLZR0dI3Vp84A1DgNBeHj1mYJm_oKnwhGMi/exec'; // https://script.google.com/macros/s/.../exec
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyQxBIy00iW_VWLTaHtg9nhf4WHgWOEk7QEEKPClLuMQixZznBMHBJS1VxmT975EwbB/exec'; // https://script.google.com/macros/s/.../exec
 var KANTOR_LAT = -7.797120;
 var KANTOR_LNG = 110.378116;
 var RADIUS_METER = 100;
@@ -714,11 +716,15 @@ function renderChoiceScreen() {
     '<div class="emp-av">👤</div><div class="emp-info"><h3>' + e.name + '</h3><p>' + e.division + ' · ' + e.id + '</p></div>';
 
   document.getElementById('statusGrid').innerHTML =
-    '<div class="sitem"><div class="slbl">Absen Masuk</div><div class="sval">' +
-    (att.hasCheckedIn ? '<span style="font-size:12px">' + att.checkInTime + '</span>' : '<span class="badge badge-gray">Belum</span>') +
+    '<div class="sitem"><div class="slbl">🌅 Absen Masuk</div><div class="sval">' +
+    (att.hasCheckedIn
+      ? '<span class="sval-time">' + String(att.checkInTime).substring(0,5) + '</span>'
+      : '<span class="badge badge-gray">Belum absen</span>') +
     '</div></div>' +
-    '<div class="sitem"><div class="slbl">Absen Pulang</div><div class="sval">' +
-    (att.hasCheckedOut ? '<span style="font-size:12px">' + att.checkOutTime + '</span>' : '<span class="badge badge-gray">Belum</span>') +
+    '<div class="sitem"><div class="slbl">🌙 Absen Pulang</div><div class="sval">' +
+    (att.hasCheckedOut
+      ? '<span class="sval-time">' + String(att.checkOutTime).substring(0,5) + '</span>'
+      : '<span class="badge badge-gray">Belum absen</span>') +
     '</div></div>';
 
   // Shift info
