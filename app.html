@@ -583,7 +583,7 @@ input::placeholder,textarea::placeholder{color:#a39587}
     <div class="up-icon" id="upIcon">📤</div>
     <h2 id="upTitle" style="font-size:18px;margin-bottom:6px">Mengupload Foto...</h2>
     <p id="upMsg" style="color:var(--muted);font-size:13px;line-height:1.5">
-      ABSENSI BELUM TERCATAT. Jangan tutup aplikasi<br>sampai foto selesai terupload.
+      <strong>ABSENSI BELUM TERCATAT.</strong><br>Jangan tutup aplikasi<br>sampai foto selesai terupload.
     </p>
     <div class="up-bar"><div class="up-fill" id="upFill"></div></div>
     <div class="up-label"><span id="upChunk">Chunk 0/0</span><span id="upPct">0%</span></div>
@@ -644,7 +644,7 @@ input::placeholder,textarea::placeholder{color:#a39587}
 var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbw9pJFqcYQTMHG1uftFGpIfsvGrkoRC5C8qLBG4od2KaVc_E5SF7jhBHDt-V0okMLeG/exec'; // https://script.google.com/macros/s/.../exec
 var KANTOR_LAT = -7.797120;
 var KANTOR_LNG = 110.378116;
-var RADIUS_METER = 1000;
+var RADIUS_METER = 100;
 var SHIFTS = [
   { nama:'Pagi',     jamMasuk:'08:00', jamPulang:'16:00', dari:'00:00', sampai:'09:00' },
   { nama:'Middle 1', jamMasuk:'12:00', jamPulang:'20:00', dari:'10:00', sampai:'12:30' },
@@ -1474,7 +1474,7 @@ function showUploadScreen(res) {
   document.getElementById('upIcon').textContent = '📤';
   document.getElementById('upTitle').textContent = 'Mengupload Foto...';
   document.getElementById('upMsg').innerHTML =
-    'ABSENSI BELUM TERCATAT.<br>Jangan tutup aplikasi<br>sampai foto selesai terupload.';
+    '<strong>ABSENSI BELUM TERCATAT.</strong><br>Jangan tutup aplikasi<br>sampai foto selesai terupload.';
   document.getElementById('upFill').style.width = '0%';
   document.getElementById('upChunk').textContent = 'Chunk 0/0';
   document.getElementById('upPct').textContent = '0%';
