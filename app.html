@@ -1610,7 +1610,9 @@ function backToMenu() {
 // Chunk lebih besar (50KB) + auto-resume kalau terputus
 // ═══════════════════════════════════════════════════════════════
 
-var CHUNK_SIZE = 150000; // Lebih sedikit round-trip ke Apps Script
+// CacheService Apps Script membatasi nilai sekitar 100 KB. Gunakan 45 KB agar
+// payload base64 + metadata tetap aman setelah serialisasi JSON.
+var CHUNK_SIZE = 45000;
 var RESUME_KEY = 'restless_pending_foto';
 var DEBUG_UI = false;
 
@@ -1690,13 +1692,11 @@ function uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64
       onUploadDone(res.url);
     } else if (res && res.ok && !res.done) {
       onUploadProgress(idx + 1, totalChunks);
-      if ((idx + 1) % 3 === 0 || idx + 1 === totalChunks) {
-        saveResumeState({
-          sessionId: sessionId, filename: filename, tanggal: tanggal,
-          employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
-          totalChunks: totalChunks, nextChunk: idx + 1, ts: Date.now()
-        });
-      }
+      saveResumeState({
+        sessionId: sessionId, filename: filename, tanggal: tanggal,
+        employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
+        totalChunks: totalChunks, nextChunk: idx + 1, ts: Date.now()
+      });
       uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx + 1, 0);
     } else {
       dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
