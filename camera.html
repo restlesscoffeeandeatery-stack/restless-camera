@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Absensi Restless</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6c63ff">
+<meta name="theme-color" content="#16110C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -46,7 +46,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:san
 #errMsg{color:#e2e8f0;font-size:14px;line-height:1.7;white-space:pre-line;margin-top:8px}
 .eBtn{padding:14px 28px;border-radius:10px;border:none;font-size:15px;
   font-weight:600;cursor:pointer;touch-action:manipulation;width:100%;max-width:280px}
-.eBtn-primary{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;margin-top:4px}
+.eBtn-primary{background:linear-gradient(135deg,#E0A458,#F2C98F);color:#24170b;margin-top:4px}
 .eBtn-ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#e2e8f0;margin-top:6px}
 #prevScreen{position:fixed;inset:0;z-index:30;background:#000;
   display:none;flex-direction:column;align-items:center;justify-content:center}
@@ -56,7 +56,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:san
   display:flex;gap:12px}
 .pBtn{flex:1;padding:15px;border-radius:10px;border:none;
   font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
-.pBtn-ok{background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff}
+.pBtn-ok{background:linear-gradient(135deg,#E0A458,#F2C98F);color:#24170b}
 .pBtn-re{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
 #doneScreen{position:fixed;inset:0;z-index:40;background:#0d0d14;
   display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -100,7 +100,7 @@ canvas{display:none}
   </div>
   <a id="btnKembali" href="#"
      style="margin-top:8px;padding:14px 28px;
-     background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;
+     background:linear-gradient(135deg,#E0A458,#F2C98F);color:#24170b;
      border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">
     ← Kembali ke Absensi
   </a>
@@ -305,7 +305,7 @@ function hideErr() { document.getElementById('errScreen').style.display = 'none'
     <div style="color:#e2e8f0;font-size:14px;font-weight:600">Install Absensi Restless</div>
     <div style="color:#64748b;font-size:12px">Tambahkan ke layar utama HP</div>
   </div>
-  <button onclick="installPWA()" style="background:linear-gradient(135deg,#6c63ff,#a78bfa);
+  <button onclick="installPWA()" style="background:linear-gradient(135deg,#E0A458,#F2C98F);
     color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;
     font-weight:600;cursor:pointer;white-space:nowrap">Install</button>
   <button onclick="dismissInstall()" style="background:transparent;border:none;

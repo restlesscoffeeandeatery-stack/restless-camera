@@ -1,6 +1,8 @@
-var CACHE = 'absensi-restless-v2';
+var CACHE = 'absensi-restless-v3';
 var FILES = [
   '/restless-camera/app.html',
+  '/restless-camera/pwa-index.html',
+  '/restless-camera/camera.html',
   '/restless-camera/manifest.json',
   '/restless-camera/icon-192.png',
   '/restless-camera/icon-512.png'
@@ -19,13 +21,28 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
+  if (e.request.method !== 'GET') return;
   if (e.request.url.indexOf('script.google')!==-1 ||
       e.request.url.indexOf('googleusercontent')!==-1) return;
+  var url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(function() {
+        return caches.match('/restless-camera/app.html');
+      })
+    );
+    return;
+  }
+
   e.respondWith(
-    fetch(e.request).then(function(r) {
-      var rc = r.clone();
-      caches.open(CACHE).then(function(c){c.put(e.request,rc);});
-      return r;
-    }).catch(function() { return caches.match(e.request); })
+    caches.match(e.request).then(function(cached) {
+      var fresh = fetch(e.request).then(function(r) {
+        if (r && r.ok) caches.open(CACHE).then(function(c){c.put(e.request,r.clone());});
+        return r;
+      }).catch(function() { return cached; });
+      return cached || fresh;
+    })
   );
 });

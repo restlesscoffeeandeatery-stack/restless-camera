@@ -355,6 +355,79 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
   .succ-badge svg path{animation:none;stroke-dashoffset:0}
   .succ-name,.succ-title,.succ-msg,.succ-time-card,.succ-rows{animation:none}
 }
+
+/* ══════════════════════════════════════════════════════════
+   RESTLESS UX 2026 — fast, calm, thumb-first
+   Layer ini sengaja berupa override agar struktur dan logic lama tetap utuh.
+   ══════════════════════════════════════════════════════════ */
+:root{
+  --bg:#17110c;--surface:#fffaf3;--surface2:#f4eadc;--border:#e1d2bf;
+  --accent:#d9933f;--accent2:#f0bd75;--success:#16885f;--warning:#b86f14;
+  --danger:#bd443c;--muted:#75685c;--ink:#241b14;
+  --shadow-soft:0 18px 48px rgba(48,31,17,.12)
+}
+html{background:#efe5d7}
+body{color:var(--ink);background:
+  radial-gradient(80% 48% at 50% -8%,rgba(224,164,88,.22),transparent 72%),
+  #f3eadf;min-height:100dvh}
+.screen{min-height:100dvh;padding:max(16px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));
+  justify-content:flex-start;animation:screenIn .24s ease-out both}
+.screen.active{display:flex}
+@keyframes screenIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{max-width:430px;padding:22px 18px 20px;margin:auto;background:rgba(255,250,243,.97);
+  color:var(--ink);border:1px solid rgba(96,67,41,.13);border-radius:28px;
+  box-shadow:var(--shadow-soft);overflow:visible}
+.card::before{height:0}
+.ph{border:0;padding:0;margin-bottom:20px}.ph-icon{background:#2a1e15;color:#f3c17e;
+  box-shadow:0 7px 18px rgba(42,30,21,.2)}
+.ph-text h2{font-family:'Fraunces',Georgia,serif;font-size:18px;color:var(--ink)}
+.ph-text p,.clock-date,.sitem .slbl,.emp-info p,.up-label{color:var(--muted)}
+.badge-purple{background:#f4e2c8;color:#81521f}.badge-gray{background:#eee6dc;color:#75685c}
+.badge-green{background:#dff3e9;color:#126a4b}.badge-yellow{background:#fff0d9;color:#92580f}
+.emp-badge{border:0;background:transparent;padding:0;margin-bottom:20px}.emp-av{width:46px;height:46px;border-radius:50%}
+.emp-info h3{font-size:16px;color:var(--ink)}
+.clock-wrap{text-align:left;padding:0;background:transparent;border:0;margin-bottom:18px;box-shadow:none}
+.clock-wrap::before,.clock-wrap::after{display:none}.clock{font-size:42px;line-height:1;color:var(--ink);
+  background:none;-webkit-text-fill-color:currentColor;font-variant-numeric:tabular-nums}
+.clock-date{font-size:12px;margin-top:6px}
+.sgrid{gap:8px}.sitem{background:#f8f1e8;border:1px solid #eadfD1;border-radius:15px;padding:13px}
+.sval-time{color:var(--ink)}
+.shift-box{display:block!important;background:#271c14;color:#fff;border:0;border-radius:18px;padding:16px;
+  box-shadow:0 12px 28px rgba(42,30,21,.18)}
+.shift-box strong{color:#f2c98f!important}.shift-box span{color:#cdbdac!important}
+.btn{min-height:52px;border-radius:16px;font-size:15px;transition:transform .14s,box-shadow .14s,opacity .14s}
+.btn:focus-visible,.shutter:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid rgba(217,147,63,.35);outline-offset:3px}
+.btn-primary{background:linear-gradient(135deg,#e5a24f,#cb7f2e);color:#24170b;
+  box-shadow:0 12px 24px rgba(203,127,46,.25)}
+.btn-success{background:var(--success);color:#fff}.btn-ghost{background:#fffaf3;border-color:#dfd1c1;color:#594b40}
+.btn:disabled{opacity:.43;box-shadow:none}.divider{border-color:#e7dacb}
+input,textarea{background:#fffdf9;border-color:#ddcfbf;color:var(--ink)}
+input::placeholder,textarea::placeholder{color:#a39587}
+.steps{gap:7px}.step{height:5px;background:#e4d7c7}.step.active{background:var(--accent)}
+.gps-panel{background:#f8f1e8;border-color:#e5d8c8;border-radius:18px;padding:16px}
+.gps-panel>div:first-child span:first-child{width:38px;height:38px;display:grid;place-items:center;
+  background:#efe0cc;border-radius:12px}.gdetail{color:#8d7e70}.rbar{height:7px;background:#dfd2c2}
+.alert{border-radius:14px}.alert-success{background:#e4f5ec;color:#116a4a}.alert-info{background:#f5e8d6;color:#725021}
+#s4{padding:0;background:#0d0906}.screen#s4 .card{max-width:none;width:100%;min-height:100dvh;margin:0;
+  border:0;border-radius:0;background:#0d0906;color:#fff;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));box-shadow:none}
+#s4 .ph-text h2,#s4 .ph-text p{color:#fff}#s4 .ph-text p{opacity:.65}#s4 .ph-icon{background:rgba(255,255,255,.1)}
+#s4 .steps{display:none}#camView{border-radius:24px;aspect-ratio:3/4;max-height:calc(100dvh - 245px);margin:0 auto 12px}
+.cam-oval{width:62%;border-color:rgba(255,255,255,.65)}
+.face-bar{border:0;border-radius:99px;margin:-64px auto 18px;position:relative;z-index:3;width:max-content;max-width:90%;
+  padding:10px 15px;background:rgba(18,14,10,.82);color:#fff;backdrop-filter:blur(10px)}
+.shutter{width:72px;height:72px;background:#fff;border:5px solid rgba(255,255,255,.45);box-shadow:0 0 0 4px rgba(0,0,0,.22)}
+#s4 .btn-ghost{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.17);color:#fff}
+.preview-wrap{border:0;border-radius:24px;max-height:64dvh}.preview-wrap img{max-height:64dvh;object-fit:cover}
+.success-card{text-align:center;padding-top:34px}.succ-photo{border-color:#fff;background:#efe6da}.succ-title{font-size:25px;color:var(--success);
+  background:none;-webkit-text-fill-color:currentColor}.succ-time-card,.succ-rows{background:#f8f1e8;border-color:#e5d8c8}
+.succ-time{color:var(--ink);background:none;-webkit-text-fill-color:currentColor}.succ-row{border-color:#e5d8c8;color:var(--muted)}
+.succ-row strong{color:var(--ink)}.succ-row a{color:#9a5f21}
+#loading{background:rgba(23,17,12,.8);backdrop-filter:blur(8px)}
+#installBanner{background:#fffaf3;color:var(--ink);border-color:#e5d8c8;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.ib-btn{color:#25180d;background:var(--accent)}
+@media(max-width:480px){.screen:not(#s4){padding-left:12px;padding-right:12px}.card{padding:20px 16px}.clock{font-size:39px}}
+@media(min-width:700px){.screen{justify-content:center}.screen#s4 .card{max-width:470px;min-height:auto;border-radius:30px;margin:auto}}
+@media(prefers-reduced-motion:reduce){.screen{animation:none}.btn{transition:none}}
 </style>
 </head>
 <body>
@@ -370,7 +443,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
 </div>
 
 <!-- ═══════════════════════════════════ LOADING ══════════════════════════════════ -->
-<div id="loading"><div class="spinner"></div><p id="loadingText">Memproses...</p></div>
+<div id="loading" role="status" aria-live="polite" aria-busy="true"><div class="spinner" aria-hidden="true"></div><p id="loadingText">Memproses...</p></div>
 
 <!-- ═══════════════════════════════════ SCREEN 1: LOGIN ══════════════════════════ -->
 <div class="screen active" id="s1">
@@ -382,10 +455,10 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
     </div>
     <div id="loginAlert" class="alert alert-error"></div>
     <div class="fg">
-      <label>Kode Akses</label>
-      <input type="password" id="accessCode" placeholder="••••" autocomplete="off" inputmode="numeric">
+      <label for="accessCode">Kode Akses</label>
+      <input type="password" id="accessCode" placeholder="••••" autocomplete="one-time-code" inputmode="numeric" enterkeyhint="go" aria-describedby="loginAlert">
     </div>
-    <button class="btn btn-primary" id="btnLogin" onclick="doLogin()">🗿 Masuk</button>
+    <button class="btn btn-primary" id="btnLogin" onclick="doLogin()"><span aria-hidden="true">→</span> Masuk</button>
   </div>
 </div>
 
@@ -394,7 +467,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
   <div class="card">
     <div class="ph">
       <div class="ph-icon">☕</div>
-      <div class="ph-text"><h2>Absensi</h2><p>Pilih jenis absensi</p></div>
+      <div class="ph-text"><h2 id="choiceGreeting">Selamat datang</h2><p id="choiceReadiness">Siap untuk absen</p></div>
       <div class="ph-badge"><span class="badge badge-green" id="empBadgeName">Karyawan</span></div>
     </div>
     <div id="empBadge" class="emp-badge"></div>
@@ -405,11 +478,11 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
     <div id="statusGrid" class="sgrid"></div>
     <div id="shiftBox" class="shift-box"></div>
     <div id="choiceAlert" class="alert alert-info"></div>
-    <button class="btn btn-primary" id="btnMasuk" onclick="startAbsen('checkin')">☀️ Absen Masuk</button>
+    <button class="btn btn-primary" id="btnMasuk" onclick="startAbsen('checkin')"><span aria-hidden="true">◎</span> Absen Masuk</button>
     <div class="sp"></div>
-    <button class="btn btn-ghost" id="btnPulang" onclick="startAbsen('checkout')">🌙 Absen Pulang</button>
+    <button class="btn btn-ghost" id="btnPulang" onclick="startAbsen('checkout')"><span aria-hidden="true">↗</span> Absen Pulang</button>
     <div class="divider"></div>
-    <button class="btn btn-ghost" onclick="doLogout()">← Keluar</button>
+    <button class="btn btn-ghost" onclick="doLogout()">Keluar dari akun</button>
   </div>
 </div>
 
@@ -437,7 +510,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
         <div class="rbar"><div class="rfill" id="rbarFill" style="width:0%"></div></div>
       </div>
     </div>
-    <div id="gpsAlert" class="alert"></div>
+    <div id="gpsAlert" class="alert" role="status" aria-live="polite"></div>
     <button class="btn btn-primary" id="btnGpsNext" onclick="goToCamera()" disabled>Lanjut → Foto Selfie</button>
     <div class="sp"></div>
     <button class="btn btn-ghost" onclick="retryGps()">🔄 Deteksi Ulang</button>
@@ -460,7 +533,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
     <div id="camView">
       <video id="video" autoplay playsinline muted webkit-playsinline></video>
       <div id="camOverlay"><div class="cam-oval" id="camOval"></div></div>
-      <div id="camBar"><button class="shutter" id="btnShutter" onclick="snap()" disabled>📷</button></div>
+      <div id="camBar"><button class="shutter" id="btnShutter" onclick="snap()" disabled aria-label="Ambil foto"><span aria-hidden="true"></span></button></div>
       <div class="cam-status" id="camStatus"></div>
     </div>
 
@@ -471,7 +544,7 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
     </div>
 
     <!-- Preview foto -->
-    <div class="preview-wrap" id="previewWrap"><img id="previewImg" src="" alt="foto"></div>
+    <div class="preview-wrap" id="previewWrap"><img id="previewImg" src="" alt="Pratinjau foto selfie" width="960" height="960"></div>
 
     <canvas id="canvas"></canvas>
     <div id="camAlert" class="alert alert-error"></div>
@@ -497,8 +570,8 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
     <div class="steps"><div class="step done"></div><div class="step done"></div><div class="step active"></div></div>
     <div id="reasonAlert" class="alert alert-info"></div>
     <div id="reasonForm" class="fg">
-      <label id="reasonLabel">Alasan</label>
-      <textarea id="reasonText" placeholder="Tuliskan alasan Anda..."></textarea>
+      <label id="reasonLabel" for="reasonText">Alasan</label>
+      <textarea id="reasonText" placeholder="Tuliskan alasan Anda..." aria-describedby="reasonAlert"></textarea>
     </div>
     <button class="btn btn-success" onclick="submitAbsen()">✅ Konfirmasi Absensi</button>
   </div>
@@ -558,10 +631,10 @@ input:focus,select:focus,textarea:focus{border-color:#E0A458;
 
 <!-- ═══════════════════════════════════ INSTALL BANNER ═══════════════════════════ -->
 <div id="installBanner">
-  <img src="icon-192.png" alt="icon">
+  <img src="icon-192.png" alt="" width="38" height="38">
   <div class="ib-text"><strong>Install Absensi Restless</strong><span>Tambahkan ke layar utama</span></div>
   <button class="ib-btn" onclick="doInstall()">Install</button>
-  <button class="ib-close" onclick="closeInstall()">✕</button>
+  <button class="ib-close" onclick="closeInstall()" aria-label="Tutup banner instalasi">✕</button>
 </div>
 
 <script>
@@ -633,6 +706,20 @@ function formatDate(d) {
   return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>'"]/g, function(ch) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[ch];
+  });
+}
+
+function fetchWithTimeout(url, options, timeoutMs) {
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = controller ? setTimeout(function(){ controller.abort(); }, timeoutMs || 15000) : null;
+  options = options || {};
+  if (controller) options.signal = controller.signal;
+  return fetch(url, options).finally(function(){ if (timer) clearTimeout(timer); });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // API CALL ke Apps Script
 // ═══════════════════════════════════════════════════════════════
@@ -645,16 +732,19 @@ function apiGet(fn, params) {
       );
     }
   }
-  return fetch(url).then(function(r) { return r.json(); });
+  return fetchWithTimeout(url, { cache:'no-store' }, 15000).then(function(r) {
+    if (!r.ok) throw new Error('Server merespons ' + r.status);
+    return r.json();
+  });
 }
 
 function apiPost(data) {
-  return fetch(WEBAPP_URL, {
+  return fetchWithTimeout(WEBAPP_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(data)
-  });
+  }, 20000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -666,7 +756,7 @@ window.addEventListener('load', function() {
   setTimeout(function() {
     document.getElementById('splash').classList.add('hide');
     setTimeout(function() { document.getElementById('splash').style.display = 'none'; }, 500);
-  }, 1800);
+  }, 420);
   setupInstallPrompt();
 });
 
@@ -711,9 +801,13 @@ function renderChoiceScreen() {
   var e = state.employee;
   var att = state.attendanceToday || {};
 
+  var hour = new Date().getHours();
+  var greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam';
+  document.getElementById('choiceGreeting').textContent = greeting + ', ' + e.name.split(' ')[0];
+  document.getElementById('choiceReadiness').textContent = att.hasCheckedIn && !att.hasCheckedOut ? 'Waktunya menyelesaikan shift' : 'Siap untuk absen';
   document.getElementById('empBadgeName').textContent = e.name;
   document.getElementById('empBadge').innerHTML =
-    '<div class="emp-av">👤</div><div class="emp-info"><h3>' + e.name + '</h3><p>' + e.division + ' · ' + e.id + '</p></div>';
+    '<div class="emp-av" aria-hidden="true">' + escapeHtml(e.name.charAt(0).toUpperCase()) + '</div><div class="emp-info"><h3>' + escapeHtml(e.name) + '</h3><p>' + escapeHtml(e.division) + ' · ' + escapeHtml(e.id) + '</p></div>';
 
   document.getElementById('statusGrid').innerHTML =
     '<div class="sitem"><div class="slbl">🌅 Absen Masuk</div><div class="sval">' +
@@ -764,12 +858,14 @@ function renderChoiceScreen() {
 
 function startClock() {
   if (clockInterval) clearInterval(clockInterval);
-  clockInterval = setInterval(function() {
+  function tickClock() {
     var n = new Date();
     document.getElementById('liveClock').textContent =
       n.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     document.getElementById('liveDate').textContent = formatDate(n);
-  }, 1000);
+  }
+  tickClock();
+  clockInterval = setInterval(tickClock, 1000);
 }
 
 function doLogout() {
@@ -793,8 +889,8 @@ function startAbsen(mode) {
 
 // ── GPS CONFIG ───────────────────────────────────────────────
 var GPS_MAX_ACC     = 80;   // Tolak pembacaan dengan akurasi > 80 meter
-var GPS_SAMPLES     = 5;    // Ambil 5 sampel, pilih yang terbaik
-var GPS_TIMEOUT_SEC = 25;   // Timeout total deteksi GPS
+var GPS_SAMPLES     = 3;    // Tiga sampel cukup untuk keputusan cepat dan stabil
+var GPS_TIMEOUT_SEC = 15;   // Hindari pengguna menunggu terlalu lama
 var GPS_MARGIN      = 50;   // Margin tambahan radius (meter) untuk toleransi GPS indoor
 
 var gpsSamples   = [];      // Kumpulan sampel GPS
@@ -830,8 +926,8 @@ function startGps() {
 
   gpsWatchId = navigator.geolocation.watchPosition(onGpsOk, onGpsErr, {
     enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0   // Selalu minta data segar, jangan pakai cache
+    timeout: 12000,
+    maximumAge: 8000 // Gunakan fix yang sangat baru untuk mempercepat cold start
   });
 }
 
@@ -841,10 +937,7 @@ function stopGps() {
 }
 
 function hitungJarak(lat, lng) {
-  var R = 6371000;
   var toRad = function(x) { return x * Math.PI / 180; };
-  var dLat = toRad(lng - KANTOR_LNG);  // intentionally using Haversine
-  var dLng = toRad(lat - KANTOR_LAT);
   // Simplified flat-earth untuk jarak pendek (< 1km) — cukup akurat
   var dx = (lng - KANTOR_LNG) * Math.cos(toRad(KANTOR_LAT)) * 111320;
   var dy = (lat - KANTOR_LAT) * 111320;
@@ -868,7 +961,7 @@ function onGpsOk(pos) {
   gpsSamples.push({ lat: lat, lng: lng, acc: acc, jarak: hitungJarak(lat, lng) });
 
   // Jika sudah dapat sampel yang sangat akurat (< 30m), langsung pakai
-  if (acc <= 30 && gpsSamples.length >= 2) {
+  if (acc <= 35 && gpsSamples.length >= 1) {
     stopGps();
     evaluateBestSample();
     return;
@@ -997,7 +1090,7 @@ function goToCamera() {
 
 function openCamera() {
   setCamStatus('Membuka kamera...');
-  var c = { video: { facingMode: facing, width:{ideal:1280}, height:{ideal:960} }, audio: false };
+  var c = { video: { facingMode: facing, width:{ideal:960}, height:{ideal:720}, frameRate:{ideal:24,max:30} }, audio: false };
   navigator.mediaDevices.getUserMedia(c)
     .then(gotStream)
     .catch(function() {
@@ -1028,7 +1121,7 @@ function gotStream(s) {
 //          absen ditandai deteksiWajah = "SKIP" untuk audit
 // ═══════════════════════════════════════════════════════════════
 var FACE_LOAD_TIMEOUT = 12000;  // ms — batas tunggu load engine
-var FACE_INTERVAL     = 250;    // ms — frekuensi cek wajah (~4x/detik)
+var FACE_INTERVAL     = 350;    // ms — responsif tanpa membebani HP lama
 var FACE_FRESH_MS     = 1500;   // ms — hasil deteksi dianggap masih segar
 
 var faceEngine    = null;    // 'native' | 'mediapipe' | 'none' (fail-open)
@@ -1240,11 +1333,14 @@ function snap() {
   }
   stopFaceLoop();
   var c = document.getElementById('canvas');
-  c.width = v.videoWidth; c.height = v.videoHeight;
+  var maxEdge = 960;
+  var scale = Math.min(1, maxEdge / Math.max(v.videoWidth, v.videoHeight));
+  c.width = Math.round(v.videoWidth * scale);
+  c.height = Math.round(v.videoHeight * scale);
   var ctx = c.getContext('2d');
   if (facing === 'user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
-  ctx.drawImage(v,0,0);
-  state.photo = c.toDataURL('image/jpeg', 0.82);
+  ctx.drawImage(v,0,0,c.width,c.height);
+  state.photo = c.toDataURL('image/jpeg', 0.76);
   stopStream();
   document.getElementById('previewImg').src = state.photo;
   document.getElementById('previewWrap').style.display = 'block';
@@ -1338,11 +1434,11 @@ function submitAbsen() {
   };
 
   // Kirim data absensi dulu (tanpa foto)
-  fetch(WEBAPP_URL, {
+  fetchWithTimeout(WEBAPP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
-  })
+  }, 25000)
   .then(function(r) { return r.json(); })
   .then(function(res) {
     if (res.success) {
@@ -1514,11 +1610,13 @@ function backToMenu() {
 // Chunk lebih besar (50KB) + auto-resume kalau terputus
 // ═══════════════════════════════════════════════════════════════
 
-var CHUNK_SIZE = 50000; // 50KB per chunk
+var CHUNK_SIZE = 150000; // Lebih sedikit round-trip ke Apps Script
 var RESUME_KEY = 'restless_pending_foto';
+var DEBUG_UI = false;
 
 function dbg(msg) {
   console.log(msg);
+  if (!DEBUG_UI) return;
   var panel = document.getElementById('debugPanel');
   var log   = document.getElementById('debugLog');
   if (panel && log) {
@@ -1592,11 +1690,13 @@ function uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64
       onUploadDone(res.url);
     } else if (res && res.ok && !res.done) {
       onUploadProgress(idx + 1, totalChunks);
-      saveResumeState({
-        sessionId: sessionId, filename: filename, tanggal: tanggal,
-        employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
-        totalChunks: totalChunks, nextChunk: idx + 1, ts: Date.now()
-      });
+      if ((idx + 1) % 3 === 0 || idx + 1 === totalChunks) {
+        saveResumeState({
+          sessionId: sessionId, filename: filename, tanggal: tanggal,
+          employeeId: employeeId, tipe: tipe, photoBase64: photoBase64,
+          totalChunks: totalChunks, nextChunk: idx + 1, ts: Date.now()
+        });
+      }
       uploadChunk(sessionId, filename, tanggal, employeeId, tipe, photoBase64, totalChunks, idx + 1, 0);
     } else {
       dbg('[FOTO] ❌ Error chunk ' + idx + ': ' + (res ? res.msg : 'no response'));
